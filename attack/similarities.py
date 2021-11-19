@@ -5,39 +5,23 @@ from attack import BITARRAY
 
 QGRAMS = 'qgrams'
 
+
 # target sim_dict (for NetworkX): d = {node1: {node2: {"weight": 0.5}, ...}, ...}
 
 
-def record_sims_bf(df, threshold=0.0):
+def record_sims_bf(df, threshold, encoded_attr):
     sim_dict = dict()
-    pairs = list(combinations(df[BITARRAY], 2))
+    df = df.loc[:, [encoded_attr, BITARRAY]]
+    records = df.to_records(index=False)
+    pairs = list(combinations(records, 2))
     for pair in pairs:
-        key = frozenset({pair[0].tobytes(), pair[1].tobytes()})
-        value = dice_sim_bfs(pair[0], pair[1])
-        if value >= threshold:
-            sim_dict[key] = value
-    return sim_dict
-
-
-def dice_sim_bfs(bitarray1, bitarray2):
-    bits_and = bitarray1 & bitarray2
-    bit_count_sum = bitarray1.count(1) + bitarray2.count(1)
-    if bit_count_sum == 0:
-        return 0
-    return 2 * bits_and.count(1) / bit_count_sum
-
-
-def record_sims_plain_blk(blk_dict, qgram_attributes, threshold = 0.0):
-    sim_dict = dict()
-    for key, value in blk_dict.items():
-        sim_dict.update(record_sims_plain(value, qgram_attributes, threshold))
-    return sim_dict
-
-
-def record_sims_encoded_blk(blk_dict, threshold):
-    sim_dict = dict()
-    for key, value in blk_dict.items():
-        sim_dict.update(record_sims_bf(value, threshold))
+        key = pair[0][0]
+        sim = dice_sim_bfs(pair[0][1], pair[1][1])
+        if sim >= threshold:
+            if key not in sim_dict:
+                sim_dict[key] = dict()
+            value_dict = sim_dict[key]
+            value_dict[pair[1][0]] = {"weight": sim}
     return sim_dict
 
 
@@ -50,10 +34,34 @@ def record_sims_plain(df, qgram_attributes, threshold=0.0):
     sim_dict = dict()
     pairs = list(combinations(df[QGRAMS], 2))
     for pair in pairs:
-        key = frozenset({pair[0], pair[1]})
-        value = dice_sim_plain(pair[0], pair[1])
-        if value > threshold:
-            sim_dict[key] = value
+        sim = dice_sim_plain(pair[0], pair[1])
+        if sim >= threshold:
+            if pair[0] not in sim_dict:
+                sim_dict[pair[0]] = dict()
+            value_dict = sim_dict[pair[0]]
+            value_dict[pair[1]] = {"weight": sim}
+    return sim_dict
+
+
+def dice_sim_bfs(bitarray1, bitarray2):
+    bits_and = bitarray1 & bitarray2
+    bit_count_sum = bitarray1.count(1) + bitarray2.count(1)
+    if bit_count_sum == 0:
+        return 0
+    return 2 * bits_and.count(1) / bit_count_sum
+
+
+def record_sims_plain_blk(blk_dict, qgram_attributes, threshold=0.0):
+    sim_dict = dict()
+    for key, value in blk_dict.items():
+        sim_dict.update(record_sims_plain(value, qgram_attributes, threshold))
+    return sim_dict
+
+
+def record_sims_encoded_blk(blk_dict, threshold, encoded_attr):
+    sim_dict = dict()
+    for key, value in blk_dict.items():
+        sim_dict.update(record_sims_bf(value, threshold, encoded_attr))
     return sim_dict
 
 

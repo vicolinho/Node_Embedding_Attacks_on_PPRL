@@ -1,7 +1,7 @@
 import networkx as nx
 
 def convert_dict_to_graph(sim_dict):
-    pass
+    return nx.Graph(sim_dict)
 
 def add_edges_from_sims(sim_array):
     list_edges = []
