@@ -53,7 +53,10 @@ def soundex(attr_list):
         sdxcode += soundex_core(attr)
     return sdxcode
 
-def get_blocking_dict(df, blk_key_attr):
+def no_blocking(attr_list):
+    return ''
+
+def get_blocking_dict(df, blk_key_attr): #todo: additional needed attr
     blk_dict = dict()
     grouped_blk_df = df.groupby(blk_key_attr)
     for blk_key in df[blk_key_attr].unique():
@@ -89,7 +92,9 @@ def get_dict_dataframes_by_blocking_keys_encoded(df, bf_size, lsh_count, lsh_siz
     lst_permutations = choose_positions(lsh_count, lsh_size, bf_size)
     df = add_lsh_blocking_columns(df, lst_permutations)
     for i in range(0, lsh_count):
-        lst_dicts.append(get_blocking_dict(df,LSH_BLOCKING + str(i)))
+        blk_key_attr = LSH_BLOCKING + str(i)
+        df_temp = df.loc[:,[blk_key_attr, 'base64_bf', BITARRAY]] #todo: sehr unsauber bisher
+        lst_dicts.append(get_blocking_dict(df_temp,blk_key_attr))
     return lst_dicts
 
 def get_dict_dataframes_by_blocking_keys_plain(df, blk_attr_list, blk_func):

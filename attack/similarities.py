@@ -1,3 +1,6 @@
+import math
+from functools import reduce
+
 from nltk import ngrams
 from itertools import combinations
 
@@ -78,3 +81,65 @@ def dice_sim_plain(bigrams1, bigrams2):
         return 2 * len(intersection) / (len(bigrams1) + len(bigrams2))
     else:
         return 0.0
+
+# https://doi.org/10.1021/ci600526a
+def compute_number_of_qgrams(bf_length, num_hash_f, number_of_bits):
+    qgrams = -((bf_length) / num_hash_f) * \
+                         math.log(1.0 - float(number_of_bits) / bf_length)
+    return qgrams
+
+for bf_length in [1024]:
+    for num_hash_f in range(1,4):
+        for number_of_bits in [10, 20, 5]:
+            print(bf_length, num_hash_f, number_of_bits, compute_number_of_qgrams(bf_length, num_hash_f, number_of_bits))
+
+def compute_number_of_common_qgrams(bf_length, num_hash_f, number_of_bits_a, number_of_bits_b, number_of_bits_a_plus_b):
+    qgrams = -((bf_length) / num_hash_f) * \
+                         math.log((1.0 - float(number_of_bits_a_plus_b) / bf_length)/((1.0 - float(number_of_bits_a) / bf_length)*(1.0 - float(number_of_bits_b) / bf_length)))
+
+    return max(qgrams,0)
+
+def compute_number_of_united_qgrams(bf_length, num_hash_f, number_of_bits_a, number_of_bits_b, number_of_bits_a_plus_b):
+    a = compute_number_of_qgrams(bf_length, num_hash_f, number_of_bits_a_plus_b)
+    b = -((bf_length) / num_hash_f) * \
+                         math.log((1.0 - float(number_of_bits_a) / bf_length)*(1.0 - float(number_of_bits_b) / bf_length))
+    return min(a,b)
+
+def compute_real_dice_from_bits(bf_length, num_hash_f, number_of_bits_a, number_of_bits_b, number_of_bits_a_plus_b):
+    a_ = compute_number_of_qgrams(bf_length, num_hash_f, number_of_bits_a)
+    b_ = compute_number_of_qgrams(bf_length, num_hash_f, number_of_bits_b)
+    a__plus_b_ = compute_number_of_united_qgrams(bf_length, num_hash_f, number_of_bits_a, number_of_bits_b, number_of_bits_a_plus_b)
+    if a_ + b_ > 0:
+        return 2 * a__plus_b_ / (a_ + b_)
+    else:
+        return 0.0
+
+def compute_number_of_bits(bf_length, num_hash_f, number_of_qgrams):
+    est_num_bits = bf_length * math.pow(math.e, - (num_hash_f * number_of_qgrams) / bf_length)\
+                    * (math.pow(math.e, (num_hash_f * number_of_qgrams) / bf_length) - 1)
+
+    return est_num_bits
+
+def p_equal_bits(freq_1s, dice_sim):
+    p_11 = freq_1s * dice_sim
+    p_10 = p_01 = 0.5 * p_11 * ((1 - dice_sim) / dice_sim)
+    p_00 = 1 - p_11 - p_01 - p_10
+    p_equals = p_11 + p_00
+    return p_equals
+
+def get_false_negatives(p_equals, lsh_size, lsh_count):
+    p_same_bit_vector = math.pow(p_equals, lsh_size)
+    return math.pow(1-p_same_bit_vector, lsh_count)
+
+def get_frequency_1_bits(df_encoded):
+    df_sample = df_encoded.sample(frac=0.01, random_state=1)
+    bf_length = len(df_sample.iloc[0][BITARRAY]) #assuming all bit vectors have same length
+    ones = list(map(lambda ba: ba.count(1), df_sample[BITARRAY]))
+    ones_count = reduce((lambda a, b: a+b), ones)
+    total = len(df_sample) * bf_length
+    return ones_count / total
+
+def false_negative_rate(df_encoded, lsh_size, lsh_count, dice_sim):
+    freq_1s = get_frequency_1_bits(df_encoded)
+    p_equals = p_equal_bits(freq_1s, dice_sim)
+    return get_false_negatives(p_equals, lsh_size, lsh_count)

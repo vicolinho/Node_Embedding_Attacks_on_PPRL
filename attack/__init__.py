@@ -1,24 +1,38 @@
 import sys
 
+import networkx as nx
+import numpy as np
+
 from attack import blocking, preprocessing, sim_graph
 
 import pandas as pd
 
 from attack.preprocessing import BITARRAY
-from attack.similarities import record_sims_plain_blk, record_sims_encoded_blk
+from attack.similarities import record_sims_plain_blk, record_sims_encoded_blk, false_negative_rate
 
 DATA_PLAIN_FILE = "pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a.csv"
 DATA_ENCODED_FILE = "pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a_encoded_fn_ln.csv"
 QGRAM_ATTRIBUTES = ['first_name', 'last_name']
-BLK_ATTRIBUTES = ['first_name', 'last_name']
+BLK_ATTRIBUTES = ['first_name']#, 'last_name']
 ENCODED_ATTR = 'base64_bf'
 BF_LENGTH = 1024
 
 def main():
-    graph_plain = create_sim_graph_plain(DATA_PLAIN_FILE, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.soundex, 0.5, 180000)
+    graph_plain = create_sim_graph_plain(DATA_PLAIN_FILE, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.no_blocking, 0.4, 30000)
     print(graph_plain)
-    #graph_encoded = create_sim_graph_encoded(DATA_ENCODED_FILE, ENCODED_ATTR, BF_LENGTH, lsh_count = 3, lsh_size = 50, threshold = 0.0)
+    nx.write_gpickle(graph_plain, "test.gpickle")
+    #play_around_with_lsh_parameters()
+    #graph_encoded = create_sim_graph_encoded(DATA_ENCODED_FILE, ENCODED_ATTR, BF_LENGTH, lsh_count = 90, lsh_size = 60, threshold = 0.65, max_record_count=-1)
     #print(graph_encoded)
+    #nx.write_gpickle(graph_encoded, "test.gpickle")
+
+
+def play_around_with_lsh_parameters():
+    encoded_data = pd.read_csv(DATA_ENCODED_FILE)
+    encoded_data = encoded_data.head(3000)
+    encoded_data = preprocessing.preprocess_encoded_df(encoded_data, ENCODED_ATTR)
+    for i in np.arange(0.1, 1, 0.05):
+        print(i, false_negative_rate(encoded_data, 60, 90, i))
 
 def create_sim_graph_encoded(file, encoded_attr, bf_length, lsh_count, lsh_size, threshold, max_record_count = -1):
     encoded_data = pd.read_csv(file)
@@ -30,7 +44,7 @@ def create_sim_graph_encoded(file, encoded_attr, bf_length, lsh_count, lsh_size,
     for blk_dict_encoded in blk_dicts_encoded:
         sim_dict_encoded_temp = record_sims_encoded_blk(blk_dict_encoded, threshold, encoded_attr)
         sim_dict_encoded = {**sim_dict_encoded, **sim_dict_encoded_temp}
-    write_dict("output_test/encoded.txt", sim_dict_encoded)
+    #write_dict("output_test/encoded.txt", sim_dict_encoded)
     return sim_graph.convert_dict_to_graph(sim_dict_encoded)
 
 def create_sim_graph_plain(file, qgram_attributes, blk_attributes, blk_func, threshold, max_record_count = -1):
@@ -40,7 +54,7 @@ def create_sim_graph_plain(file, qgram_attributes, blk_attributes, blk_func, thr
     plain_data = preprocessing.preprocess_plain_df(plain_data, qgram_attributes, blk_attributes)
     blk_dicts_plain = blocking.get_dict_dataframes_by_blocking_keys_plain(plain_data, blk_attributes, blk_func)
     sim_dict_plain = record_sims_plain_blk(blk_dicts_plain, qgram_attributes, threshold)
-    write_dict("output_test/plain.txt", sim_dict_plain)
+    #write_dict("output_test/plain.txt", sim_dict_plain)
     return sim_graph.convert_dict_to_graph(sim_dict_plain)
 
 
