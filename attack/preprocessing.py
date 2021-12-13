@@ -2,6 +2,7 @@ import base64
 
 import numpy as np
 from bitarray import bitarray
+from nltk import ngrams
 
 BITARRAY = 'bitarray'
 
@@ -39,3 +40,21 @@ def preprocess_plain_df(df, lst_qgram_attr, lst_blocking_attr):
     df = df.drop_duplicates(subset=duplicates_subset)
     return df
 
+
+def add_qgrams_as_key(df, qgram_attributes):
+    cols = []
+    for attribute in qgram_attributes:
+        cols.append(df[attribute])
+    df[QGRAMS] = list(map(get_bigrams, *cols))
+    df = df.drop_duplicates(subset=QGRAMS)
+    return df
+
+
+def get_bigrams(*args):
+    s = set()
+    for arg in args:
+        s = s | (set(ngrams(arg, 2)))
+    return frozenset(s)
+
+
+QGRAMS = 'qgrams'

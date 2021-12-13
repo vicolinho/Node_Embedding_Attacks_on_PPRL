@@ -24,7 +24,7 @@ class TestSimilarity(unittest.TestCase):
     def test_record_sims_plain(self):
         data = {'first_name': ['annan','tim','anne','ethe'],'last_name': ['anhe','heth','li','tim']}
         df_plain = DataFrame(data=data)
-        sim_dict = attack.similarities.record_sims_plain(df_plain, ['first_name', 'last_name'])
+        sim_dict = attack.similarities.edges_df_from_blk_element_plain(df_plain, ['first_name', 'last_name'])
         bigrams_annan = frozenset({('n','n'),('a','n'),('n','a'),('n','h'),('h','e')})
         bigrams_tim = frozenset({('t','h'),('e','t'), ('h','e'), ('i','m'), ('t','i')})
         bigrams_anne = frozenset({('n','e'),('n','n'),('l','i'),('a','n')})
