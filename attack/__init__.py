@@ -9,6 +9,7 @@ from attack import blocking, preprocessing, sim_graph, node_matching
 import pandas as pd
 
 from attack.preprocessing import BITARRAY, get_bigrams, QGRAMS
+from attack.sim_graph import concat_edge_lists
 from attack.similarities import edges_df_from_blk_plain, edges_df_from_blk_bf, edges_df_from_blk_bf_adjusted
 from attack.analysis import false_negative_rate, get_num_hash_function
 
@@ -20,17 +21,18 @@ ENCODED_ATTR = 'base64_bf'
 BF_LENGTH = 1024
 
 def main():
-    edges_plain = create_sim_graph_plain(DATA_PLAIN_FILE, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.no_blocking, 0.2, 100)
-    edges_encoded = create_sim_graph_encoded(DATA_ENCODED_FILE, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, threshold = 0.2, max_record_count=100)
-    edges_plain = sim_graph.duplicate_graph(edges_plain)
-    edges_encoded = sim_graph.duplicate_graph(edges_encoded)
+    edges_plain = create_sim_graph_plain(DATA_PLAIN_FILE, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.no_blocking, 0.3, 1000)
+    edges_encoded = create_sim_graph_encoded(DATA_ENCODED_FILE, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, threshold = 0.3, max_record_count=1000)
+    #edges_plain = sim_graph.duplicate_graph(edges_plain)
+    #edges_encoded = sim_graph.duplicate_graph(edges_encoded)
+    edges_plain = concat_edge_lists(edges_plain, edges_encoded)
     graph_plain = StellarGraph(edges=edges_plain, node_features=dummy_node_data(edges_plain))
 
     print(graph_plain.info())
-    graph_encoded = StellarGraph(edges=edges_encoded, node_features=dummy_node_data(edges_encoded))
-    print(graph_encoded.info())
+    #graph_encoded = StellarGraph(edges=edges_encoded, node_features=dummy_node_data(edges_encoded))
+    #print(graph_encoded.info())
     embeddings, node_ids = sim_graph.generate_node_embeddings_graphwave(graph_plain)
-    node_matching.get_pairs_highest_sims(embeddings, node_ids, 10)
+    node_matching.get_pairs_highest_sims(embeddings, node_ids, 100)
 
     G = nx.from_pandas_edgelist(edges_plain, edge_attr=True)
     print(G)

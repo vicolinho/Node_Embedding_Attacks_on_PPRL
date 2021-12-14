@@ -16,7 +16,7 @@ def get_pqueue_pairs_ids_highest_sims(node_embeddings, ids1, ids2, no_top_pairs)
     highest_pairs = PriorityQueue()
     for i in ids1:
         for j in ids2:
-            cos_sim = cosine_similarity(node_embeddings[i].reshape(1,-1), node_embeddings[j].reshape(1,-1))
+            cos_sim = cosine_similarity(node_embeddings[i].reshape(1,-1), node_embeddings[j].reshape(1,-1))[0][0]
             if highest_pairs.qsize() == no_top_pairs + 1:
                 highest_pairs.get()
             highest_pairs.put((cos_sim, (i, j)))

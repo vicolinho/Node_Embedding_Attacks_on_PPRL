@@ -28,13 +28,16 @@ def read_both_graphs(graph_plain_file, graph_encoded_file, library = STELLAR_GRA
 
 def duplicate_graph(graph_dataframe):
     # attributes first, second, weight
-    graph_dataframe_copy = graph_dataframe.copy()
-    length = len(graph_dataframe)
-    for attr in [SOURCE, TARGET]:
-        graph_dataframe_copy[attr] = graph_dataframe_copy[attr].astype(str) + '_'
-        graph_dataframe_copy = graph_dataframe_copy.set_index(pd.Index(range(length, 2*length)))
-    return pd.concat([graph_dataframe, graph_dataframe_copy])
+    return concat_edge_lists(graph_dataframe, graph_dataframe.copy())
 
+def concat_edge_lists(edges_1, edges_2):
+    # attributes first, second, weight
+    len1 = len(edges_1)
+    len2 = len(edges_2)
+    for attr in [SOURCE, TARGET]:
+        edges_2[attr] = edges_2[attr].astype(str) + '_'
+        edges_2 = edges_2.set_index(pd.Index(range(len1, len1 + len2)))
+    return pd.concat([edges_1, edges_2])
 
 def generate_node_embeddings_node2vec(graph): # not useful only includes node ids not structures or similarities
     # https://stellargraph.readthedocs.io/en/stable/demos/embeddings/node2vec-embeddings.html
