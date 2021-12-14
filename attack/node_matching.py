@@ -14,7 +14,7 @@ def get_pqueue_pairs_ids_highest_sims(node_embeddings, no_top_pairs): # only nee
     return highest_pairs
 
 def get_matching_node_ids(highest_pairs, node_ids):
-    while highest_pairs:
+    while highest_pairs.qsize() != 0:
         pair = highest_pairs.get()
         print(node_ids[pair[1][0]],node_ids[pair[1][1]])
 

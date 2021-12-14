@@ -30,10 +30,12 @@ def main():
     graph_encoded = StellarGraph(edges=edges_encoded, node_features=dummy_node_data(edges_encoded))
     print(graph_encoded.info())
     embeddings, node_ids = sim_graph.generate_node_embeddings_graphwave(graph_plain)
-    #node_matching.get_pairs_highest_sims(embeddings, node_ids, 10) #todo: endless loop?!
+    node_matching.get_pairs_highest_sims(embeddings, node_ids, 10)
 
     G = nx.from_pandas_edgelist(edges_plain, edge_attr=True)
     print(G)
+    sp = dict(nx.all_pairs_shortest_path(G))
+    pass
 
 
 def dummy_node_data(edges):
