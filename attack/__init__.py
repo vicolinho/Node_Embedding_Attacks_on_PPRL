@@ -4,7 +4,7 @@ from pandas import DataFrame
 from stellargraph import StellarGraph
 from stellargraph.globalvar import SOURCE, TARGET
 
-from attack import blocking, preprocessing, sim_graph, node_matching, node_features
+from attack import blocking, preprocessing, sim_graph, node_matching, node_features, import_data, evaluation
 
 import pandas as pd
 
@@ -21,23 +21,19 @@ ENCODED_ATTR = 'base64_bf'
 BF_LENGTH = 1024
 
 def main():
-    nodes_plain, edges_plain = create_sim_graph_plain(DATA_PLAIN_FILE, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.no_blocking, 0.3, 1000)
-    nodes_encoded, edges_encoded = create_sim_graph_encoded(DATA_ENCODED_FILE, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, threshold = 0.3, max_record_count=1000)
-    #edges_plain = sim_graph.duplicate_graph(edges_plain)
-    #edges_encoded = sim_graph.duplicate_graph(edges_encoded)
-    #edges_plain = concat_edge_lists(edges_plain, edges_encoded)
-    graph_plain = StellarGraph(edges=edges_plain, nodes=nodes_plain)
+    plain_data = import_data.import_data_plain(DATA_PLAIN_FILE, 100, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES)
+    encoded_data = import_data.import_data_encoded(DATA_ENCODED_FILE, 100, ENCODED_ATTR)
+    true_matches = import_data.get_true_matches(plain_data[QGRAMS], encoded_data[ENCODED_ATTR])
+    nodes_plain, edges_plain = create_sim_graph_plain(plain_data, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.no_blocking, 0.3)
+    nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = 0.3)
+    graph_plain = StellarGraph(nodes_plain, edges_plain)
+    graph_encoded = StellarGraph(nodes_encoded, edges_encoded)
+    embeddings_1, node_ids_1 = sim_graph.generate_node_embeddings_graphwave(graph_plain)
+    embeddings_2, node_ids_2 = sim_graph.generate_node_embeddings_graphwave(graph_encoded)
+    matches = node_matching.get_pairs_highest_sims_two_graphs(embeddings_1, embeddings_2, node_ids_1, node_ids_2, 100)
+    precision = evaluation.evalaute_top_pairs(matches, true_matches)
+    print(precision)
 
-    print(graph_plain.info())
-    graph_encoded = StellarGraph(edges=edges_encoded, nodes=nodes_encoded)
-    print(graph_encoded.info())
-    embeddings, node_ids = sim_graph.generate_node_embeddings_graphwave(graph_plain)
-    node_matching.get_pairs_highest_sims(embeddings, node_ids, 100)
-
-    G = nx.from_pandas_edgelist(edges_plain, edge_attr=True)
-    print(G)
-    sp = dict(nx.all_pairs_shortest_path(G))
-    pass
 
 
 def dummy_node_data(edges):
@@ -66,12 +62,7 @@ def play_around_with_lsh_parameters():
     for i in np.arange(0.1, 1, 0.05):
         print(i, false_negative_rate(encoded_data, 70, 300, i))
 
-def create_sim_graph_encoded(file, encoded_attr, bf_length, lsh_count, lsh_size, threshold, max_record_count = -1):
-    encoded_data = pd.read_csv(file)
-    if max_record_count > 0:
-        encoded_data = encoded_data.head(max_record_count)
-    encoded_data = preprocessing.preprocess_encoded_df(encoded_data, encoded_attr)
-    num_of_hash_func = 15 #todo implement a useful functionality independent of the used data sets
+def create_sim_graph_encoded(encoded_data, encoded_attr, bf_length, lsh_count, lsh_size, num_of_hash_func, threshold):
     blk_dicts_encoded = blocking.get_dict_dataframes_by_blocking_keys_encoded(encoded_data, bf_length, lsh_count, lsh_size)
     nodes = node_features.node_features_encoded(encoded_data[BITARRAY], encoded_data[encoded_attr], bf_length, num_of_hash_func)
     edges = DataFrame()
@@ -81,11 +72,7 @@ def create_sim_graph_encoded(file, encoded_attr, bf_length, lsh_count, lsh_size,
         edges = pd.concat([edges, df_temp])
     return nodes, edges
 
-def create_sim_graph_plain(file, qgram_attributes, blk_attributes, blk_func, threshold, max_record_count = -1):
-    plain_data = pd.read_csv(file, na_filter=False)
-    if max_record_count > 0:
-        plain_data = plain_data.head(max_record_count)
-    plain_data = preprocessing.preprocess_plain_df(plain_data, qgram_attributes, blk_attributes)
+def create_sim_graph_plain(plain_data, qgram_attributes, blk_attributes, blk_func, threshold):
     nodes = node_features.node_features_plain(plain_data[QGRAMS])
     blk_dicts_plain = blocking.get_dict_dataframes_by_blocking_keys_plain(plain_data, blk_attributes, blk_func)
     edges = edges_df_from_blk_plain(blk_dicts_plain, qgram_attributes, threshold)

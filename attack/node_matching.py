@@ -1,17 +1,6 @@
 from sklearn.metrics.pairwise import cosine_similarity
 from queue import PriorityQueue
 
-def get_pqueue_pairs_ids_highest_sims(node_embeddings, no_top_pairs): # only needed graph1 <-> graph2
-    highest_pairs = PriorityQueue()
-    for i in range(0, len(node_embeddings)):
-        for j in range(i+1, len(node_embeddings)):
-            cos_sim = cosine_similarity(node_embeddings[i].reshape(1,-1), node_embeddings[j].reshape(1,-1))
-            if highest_pairs.qsize() == no_top_pairs + 1:
-                highest_pairs.get()
-            highest_pairs.put((cos_sim, (i, j)))
-    highest_pairs.get()
-    return highest_pairs
-
 def get_pqueue_pairs_ids_highest_sims(node_embeddings, ids1, ids2, no_top_pairs): # only needed graph1 <-> graph2
     highest_pairs = PriorityQueue()
     for i in ids1:
@@ -22,6 +11,29 @@ def get_pqueue_pairs_ids_highest_sims(node_embeddings, ids1, ids2, no_top_pairs)
             highest_pairs.put((cos_sim, (i, j)))
     highest_pairs.get()
     return highest_pairs
+
+def get_pqueue_pairs_ids_highest_sims_two_graphs(node_embeddings_1, node_embeddings_2, no_top_pairs): # only needed graph1 <-> graph2
+    highest_pairs = PriorityQueue()
+    for i in range(0, len(node_embeddings_1)):
+        for j in range(0, len(node_embeddings_2)):
+            cos_sim = cosine_similarity(node_embeddings_1[i].reshape(1,-1), node_embeddings_2[j].reshape(1,-1))[0][0]
+            if highest_pairs.qsize() == no_top_pairs + 1:
+                highest_pairs.get()
+            highest_pairs.put((cos_sim, (i, j)))
+    highest_pairs.get()
+    return highest_pairs
+
+def get_matching_node_ids_two_graphs(highest_pairs, node_ids_1, node_ids_2):
+    matches = []
+    while highest_pairs.qsize() != 0:
+        pair = highest_pairs.get()
+        matches.append((node_ids_1[pair[1][0]],node_ids_2[pair[1][1]]))
+    return matches
+
+def get_pairs_highest_sims_two_graphs(node_embeddings_1, node_embeddings_2, node_ids_1, node_ids_2, no_top_pairs):
+    highest_pairs = get_pqueue_pairs_ids_highest_sims_two_graphs(node_embeddings_1, node_embeddings_2, no_top_pairs)
+    return get_matching_node_ids_two_graphs(highest_pairs, node_ids_1, node_ids_2)
+
 
 def get_matching_node_ids(highest_pairs, node_ids):
     while highest_pairs.qsize() != 0:
@@ -42,6 +54,3 @@ def split_node_ids_into_two_groups(node_ids, split_char):
         else:
             ids1.append(pos)
     return ids1, ids2
-
-def split_node_ids():
-    pass
