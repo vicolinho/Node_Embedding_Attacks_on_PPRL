@@ -28,7 +28,7 @@ def edges_df_from_blk(blk_dict, sim_func, sim_attr, threshold, **kwargs):
 
 
 def edges_df_from_blk_element_plain(df, qgram_attributes, threshold):
-    df = add_qgrams_as_key(df, qgram_attributes)
+    # df = add_qgrams_as_key(df, qgram_attributes)
     return edges_df_from_blk_element(df, threshold, node_attribute=QGRAMS, sim_attribute=QGRAMS, sim_func=dice_sim_plain)
 
 
@@ -52,8 +52,8 @@ def edges_df_from_blk_element(df, threshold, node_attribute, sim_attribute, sim_
         else:
             sim = sim_func(pair[0][0], pair[1][0], **kwargs)
         if sim >= threshold:
-            arr_first.append(pair[0][0])
-            arr_second.append(pair[1][0])
+            arr_first.append(str(pair[0][0]))
+            arr_second.append(str(pair[1][0]))
             arr_sims.append(sim)
     d = {SOURCE: arr_first, TARGET: arr_second , WEIGHT: arr_sims}
     return pd.DataFrame(d)

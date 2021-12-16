@@ -38,6 +38,7 @@ def preprocess_encoded_df(df, encoded_attr):
 def preprocess_plain_df(df, lst_qgram_attr, lst_blocking_attr):
     duplicates_subset = lst_qgram_attr + lst_blocking_attr
     df = df.drop_duplicates(subset=duplicates_subset)
+    df = add_qgrams_as_key(df, lst_qgram_attr)
     return df
 
 
