@@ -28,9 +28,9 @@ def main():
     nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = 0.3)
     graph_plain = StellarGraph(nodes_plain, edges_plain)
     graph_encoded = StellarGraph(nodes_encoded, edges_encoded)
-    embeddings_1, node_ids_1 = sim_graph.generate_node_embeddings_graphwave(graph_plain)
+    embeddings_1, node_ids_1 = sim_graph.generate_node_embeddings_graphwave(graph_plain) # similiarities are way too high
     embeddings_2, node_ids_2 = sim_graph.generate_node_embeddings_graphwave(graph_encoded)
-    matches = node_matching.get_pairs_highest_sims_two_graphs(embeddings_1, embeddings_2, node_ids_1, node_ids_2, 100)
+    matches = node_matching.matches_from_embeddings(embeddings_1, embeddings_2, node_ids_1, node_ids_2, 40)
     precision = evaluation.evalaute_top_pairs(matches, true_matches)
     print(precision)
 
