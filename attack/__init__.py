@@ -1,7 +1,7 @@
-import networkx as nx
 import numpy as np
 from pandas import DataFrame
 from stellargraph import StellarGraph
+from stellargraph.datasets import datasets
 from stellargraph.globalvar import SOURCE, TARGET
 
 from attack import blocking, preprocessing, sim_graph, node_matching, node_features, import_data, evaluation
@@ -24,17 +24,27 @@ def main():
     plain_data = import_data.import_data_plain(DATA_PLAIN_FILE, 100, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES)
     encoded_data = import_data.import_data_encoded(DATA_ENCODED_FILE, 100, ENCODED_ATTR)
     true_matches = import_data.get_true_matches(plain_data[QGRAMS], encoded_data[ENCODED_ATTR])
-    nodes_plain, edges_plain = create_sim_graph_plain(plain_data, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.no_blocking, 0.3)
-    nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = 0.3)
+    nodes_plain, edges_plain = create_sim_graph_plain(plain_data, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.no_blocking, 0.4)
+    nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = 0.4)
     graph_plain = StellarGraph(nodes_plain, edges_plain)
     graph_encoded = StellarGraph(nodes_encoded, edges_encoded)
     embeddings_1, node_ids_1 = sim_graph.generate_node_embeddings_graphwave(graph_plain) # similiarities are way too high
     embeddings_2, node_ids_2 = sim_graph.generate_node_embeddings_graphwave(graph_encoded)
-    matches = node_matching.matches_from_embeddings(embeddings_1, embeddings_2, node_ids_1, node_ids_2, 40)
+    matches = node_matching.matches_from_embeddings(embeddings_1, embeddings_2, node_ids_1, node_ids_2, 200)
+    #matches = node_matching.get_pairs_highest_sims_two_graphs(embeddings_1, embeddings_2, node_ids_1, node_ids_2, 200)
     precision = evaluation.evalaute_top_pairs(matches, true_matches)
     print(precision)
+    #try_something()
 
-
+def try_something():
+    dataset = datasets.Cora()
+    G, node_subjects = dataset.load()
+    embeddings_1, node_ids_1 = sim_graph.generate_node_embeddings_graphwave(
+        G)  # similiarities are way too high
+    embeddings_2, node_ids_2 = sim_graph.generate_node_embeddings_graphwave(G)
+    matches = node_matching.matches_from_embeddings(embeddings_1, embeddings_2, node_ids_1, node_ids_2, 200)
+    precision = evaluation.evalaute_top_pairs(matches, matches)
+    print(precision)
 
 def dummy_node_data(edges):
     nodes = pd.unique(pd.concat([edges[SOURCE], edges[TARGET]])).tolist()

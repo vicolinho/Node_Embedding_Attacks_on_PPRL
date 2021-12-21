@@ -2,8 +2,9 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from gensim.models import Word2Vec
+from sklearn.preprocessing import StandardScaler
 from stellargraph import StellarGraph
-from stellargraph.mapper import GraphSAGELinkGenerator, GraphWaveGenerator
+from stellargraph.mapper import GraphSAGELinkGenerator, GraphWaveGenerator, GraphSAGENodeGenerator
 from stellargraph.data import BiasedRandomWalk, UnsupervisedSampler
 from stellargraph.globalvar import SOURCE, TARGET
 from stellargraph.layer import GraphSAGE, link_classification
@@ -60,9 +61,7 @@ def generate_node_embeddings_node2vec(graph): # not useful only includes node id
     )  # numpy.ndarray of size number of nodes times embeddings dimensionality
 
     # TESTING PURPOSES:
-    node_matching.get_pairs_highest_sims(node_embeddings, node_ids, no_top_pairs=10)
-
-    return model
+    return node_embeddings, node_ids
 
 def generate_node_embeddings_graphsage(G):
     # https://stellargraph.readthedocs.io/en/stable/demos/embeddings/graphsage-unsupervised-sampler-embeddings.html
@@ -74,7 +73,7 @@ def generate_node_embeddings_graphsage(G):
         G, nodes=nodes, length=length, number_of_walks=number_of_walks
     )
     batch_size = 50
-    epochs = 4
+    epochs = 1
     num_samples = [10, 5]
     generator = GraphSAGELinkGenerator(G, batch_size, num_samples)
     train_gen = generator.flow(unsupervised_samples)
@@ -102,13 +101,18 @@ def generate_node_embeddings_graphsage(G):
         workers=4,
         shuffle=True,
     )
+    x_inp_src = x_inp[0::2]
+    x_out_src = x_out[0]
+    embedding_model = keras.Model(inputs=x_inp_src, outputs=x_out_src)
+    node_gen = GraphSAGENodeGenerator(G, batch_size, num_samples).flow(nodes)
+    node_embeddings = embedding_model.predict(node_gen, workers=4, verbose=1)
 
-    return model
+    return node_embeddings, nodes
 
 def generate_node_embeddings_graphwave(G):
-    sample_points = np.linspace(0, 100, 50).astype(np.float32)
+    sample_points = np.linspace(0, 50, 25).astype(np.float32)
     degree = 20
-    scales = [5, 10]
+    scales = [2, 4]
 
     generator = GraphWaveGenerator(G, scales=scales, degree=degree)
     node_ids = G.nodes()
@@ -117,5 +121,9 @@ def generate_node_embeddings_graphwave(G):
     )
 
     embeddings = [x.numpy() for x in embeddings_dataset]
-    return embeddings, node_ids
+    embeddings = np.reshape(embeddings, (len(embeddings), len(embeddings[0][0])))
+    scaler = StandardScaler()
+    scaler.fit(embeddings)
+    embeddings_transformed = scaler.transform(embeddings)
+    return embeddings_transformed, node_ids
 

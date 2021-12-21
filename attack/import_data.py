@@ -3,7 +3,7 @@ import pandas as pd
 from attack import preprocessing
 
 
-def get_true_matches(series_qgrams, series_encoded_attr): # todo: rather use a dict
+def get_true_matches(series_qgrams, series_encoded_attr):
     series_qgrams = series_qgrams.apply(str)
     series_encoded_attr = series_encoded_attr.apply(str)
     return list(zip(series_qgrams, series_encoded_attr))

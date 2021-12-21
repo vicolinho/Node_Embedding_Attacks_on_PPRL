@@ -2,7 +2,6 @@ import unittest
 
 from pandas import DataFrame
 
-import __init__
 from bitarray import bitarray
 
 import attack.similarities

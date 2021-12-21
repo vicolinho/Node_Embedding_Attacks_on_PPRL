@@ -25,18 +25,16 @@ def bipartite_graph_to_matches(G, nodes1, nodes2, no_top_pairs):
     return matches
 
 
-def embeddings_to_bipartite_graph(embeddings1, embeddings2): #todo: test it!
+def embeddings_to_bipartite_graph(embeddings1, embeddings2):
     source = []
     target = []
     weight = []
-    embeddings1 = np.reshape(embeddings1, (len(embeddings1), len(embeddings1[0][0])))
-    embeddings2 = np.reshape(embeddings2, (len(embeddings2), len(embeddings2[0][0])))
     cos_sims = cosine_similarity(embeddings1, embeddings2)
     for x in range(0, len(embeddings1)):
         for y in range(0, len(embeddings2)):
             source.append(U+str(x))
             target.append(V+str(y))
-            weight.append(-cos_sims[x,y])
+            weight.append(-cos_sims[x,y]) # needed to use minimum weight matching
     edges = DataFrame({SOURCE: source, TARGET: target, WEIGHT: weight})
     return nx.from_pandas_edgelist(edges, edge_attr=True)
 
