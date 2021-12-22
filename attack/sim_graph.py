@@ -73,11 +73,11 @@ def generate_node_embeddings_graphsage(G):
         G, nodes=nodes, length=length, number_of_walks=number_of_walks
     )
     batch_size = 50
-    epochs = 1
+    epochs = 4
     num_samples = [10, 5]
     generator = GraphSAGELinkGenerator(G, batch_size, num_samples)
     train_gen = generator.flow(unsupervised_samples)
-    layer_sizes = [50, 50]
+    layer_sizes = [200, 200]
     graphsage = GraphSAGE(
         layer_sizes=layer_sizes, generator=generator, bias=True, dropout=0.0, normalize="l2"
     )
