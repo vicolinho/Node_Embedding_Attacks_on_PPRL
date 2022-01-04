@@ -3,7 +3,7 @@ from stellargraph.datasets import datasets
 
 from attack import import_data, ENCODED_ATTR, \
     create_sim_graph_encoded, BF_LENGTH, sim_graph, node_matching, evaluation, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, \
-    create_sim_graph_plain, blocking
+    create_sim_graph_plain, blocking, node_features
 
 DATA_ENCODED_FILE = '../pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a_encoded_fn_ln.csv'
 DATA_PLAIN_FILE = '../pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a.csv'
@@ -16,6 +16,9 @@ def graphsage_same_graph(graph_1, graph_2, true_matches):
 
 def node2vec_same_graph(graph_1, graph_2, true_matches):
     embeddings_same_graph(sim_graph.generate_node_embeddings_node2vec, graph_1, graph_2, true_matches)
+
+def graphinfomax_same_graph(graph_1, graph_2, true_matches):
+    embeddings_same_graph(sim_graph.generate_node_embeddings_deepgraphinfomax, graph_1, graph_2, true_matches)
 
 def embeddings_same_graph(embedding_func, graph_1, graph_2, true_matches):
     embeddings_1, node_ids_1 = embedding_func(graph_1)
@@ -31,6 +34,8 @@ def get_graphs_and_matches_encoded():
                                                             lsh_size=0, num_of_hash_func=15, threshold=0.2)
     graph_1 = StellarGraph(nodes_encoded, edges_encoded)
     graph_2 = StellarGraph(nodes_encoded, edges_encoded)
+    graph_1 = node_features.add_node_features_vidange(graph_1)
+    graph_2 = node_features.add_node_features_vidange(graph_2)
     true_matches = [(id, id) for id in nodes_encoded.index.to_numpy()]
     return graph_1, graph_2, true_matches
 
@@ -40,6 +45,8 @@ def get_graphs_and_matches_plain():
                                                       blocking.no_blocking, 0.4)
     graph_1 = StellarGraph(nodes_plain, edges_plain)
     graph_2 = StellarGraph(nodes_plain, edges_plain)
+    graph_1 = node_features.add_node_features_vidange(graph_1)
+    graph_2 = node_features.add_node_features_vidange(graph_2)
     true_matches = [(id, id) for id in nodes_plain.index.to_numpy()]
     return graph_1, graph_2, true_matches
 
@@ -53,6 +60,7 @@ def get_graphs_and_matches_cora():
 def main():
     for func in [get_graphs_and_matches_encoded, get_graphs_and_matches_plain, get_graphs_and_matches_cora]:
         graph_1, graph_2, true_matches = func()
+        # graphinfomax_same_graph(graph_1, graph_2, true_matches)
         graphwave_same_graph(graph_1, graph_2, true_matches)
         graphsage_same_graph(graph_1, graph_2, true_matches)
         node2vec_same_graph(graph_1, graph_2, true_matches)
