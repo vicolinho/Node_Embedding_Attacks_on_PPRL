@@ -38,8 +38,33 @@ def embeddings_to_bipartite_graph(embeddings1, embeddings2):
     edges = DataFrame({SOURCE: source, TARGET: target, WEIGHT: weight})
     return nx.from_pandas_edgelist(edges, edge_attr=True)
 
-def matches_from_embeddings(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs):
-    return bipartite_graph_to_matches(embeddings_to_bipartite_graph(embeddings1, embeddings2), nodes1, nodes2, no_top_pairs)
+def matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, prefix_char = False):
+    matches = bipartite_graph_to_matches(embeddings_to_bipartite_graph(embeddings1, embeddings2), nodes1, nodes2, no_top_pairs)
+    if prefix_char:
+        return remove_prefix_from_matches(matches)
+    else:
+        return matches
+
+def matches_from_embeddings_combined_graph(embeddings, nodes, id1, id2, no_top_pairs):
+    embeddings1 = []
+    embeddings2 = []
+    nodes1 = []
+    nodes2 = []
+    for i in range(0, len(nodes)):
+        if nodes[i][0] == id1:
+            nodes1.append(nodes[i])
+            embeddings1.append(embeddings[i])
+        elif nodes[i][0] == id2:
+            nodes2.append(nodes[i])
+            embeddings2.append(embeddings[i])
+    return matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, True)
+
+def remove_prefix_from_matches(matches):
+    adapted_matches = []
+    for match in matches:
+        adapted_match = (match[0][2:], match[1][2:])
+        adapted_matches.append(adapted_match)
+    return adapted_matches
 
 def get_pqueue_pairs_ids_highest_sims(node_embeddings, ids1, ids2, no_top_pairs): # only needed graph1 <-> graph2
     highest_pairs = PriorityQueue()

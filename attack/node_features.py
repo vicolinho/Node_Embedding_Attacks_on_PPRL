@@ -1,27 +1,30 @@
+import numpy as np
 import pandas as pd
+from networkx import ego_graph
 from numpy import Infinity
 from stellargraph import StellarGraph
 
+from attack import sim_graph
 from attack.adjust_sims import compute_number_of_qgrams
 
 
-def node_features_plain(series_qgrams):
+def node_features_plain(series_qgrams, id):
     # series of DataFrame containing q-grams
     qgram_counts = series_qgrams.apply(len)
-    qgrams_strings = series_qgrams.apply(str)
+    qgrams_strings = series_qgrams.apply(sim_graph.adjust_node_id, args=(id))
     return pd.DataFrame({'qgrams':qgram_counts.to_numpy()}, index=qgrams_strings)
 
-def node_features_encoded(series_bitarrays, series_encoded_attr ,bf_length, num_hash_f):
+def node_features_encoded(series_bitarrays, series_encoded_attr ,bf_length, num_hash_f, id):
     # series of DataFrame containing q-grams
     bitarray_counts = series_bitarrays.apply(adjusted_number_of_qgrams, args=(bf_length, num_hash_f))
-    id_strings = series_encoded_attr.apply(str)
+    id_strings = series_encoded_attr.apply(sim_graph.adjust_node_id, args=(id))
     return pd.DataFrame({'qgrams': bitarray_counts.to_numpy()}, index=id_strings)
 
 def adjusted_number_of_qgrams(bitarray, bf_length, num_hash_f):
     number_of_bits = bitarray.count(1)
     return compute_number_of_qgrams(bf_length, num_hash_f, number_of_bits)
 
-def add_node_features_vidange(stellarG):
+def add_node_features_vidange_networkx(G):
     # list of features (Vidange et al.)
     # NodeFreq
     # NodeLen
@@ -36,19 +39,28 @@ def add_node_features_vidange(stellarG):
     # DegrCentr
     # OneHopHisto
     # TwoHopHisto
-    nxG = StellarGraph.to_networkx(stellarG)
-    for node_id in nxG.nodes:
-        n = nxG.nodes[node_id]
+    for node_id in G.nodes:
+        n = G.nodes[node_id]
         node_len = n['feature'][0]
-        node_degr = 0
-        edge_max = -Infinity
-        edge_min = Infinity
-        edge_avg = 0
-        for nbr, datadict in nxG.adj[node_id].items():
-            node_degr += 1
-            edge_max = max(edge_max, datadict[0]['weight'])
-            edge_min = min(edge_min, datadict[0]['weight'])
-            edge_avg = edge_avg + (datadict[0]['weight'] - edge_avg) / node_degr
-        n['feature'] = [node_len, node_degr, edge_max, edge_min, edge_avg]
+        list_edge_weights = []
+        for nbr, datadict in G.adj[node_id].items():
+            list_edge_weights.append(datadict[0]['weight'])
+        node_degr = len(list_edge_weights)
+        if node_degr == 0:
+            n['feature'] = [node_len, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            continue
+        edge_max = np.max(list_edge_weights)
+        edge_min = np.min(list_edge_weights)
+        edge_avg = np.mean(list_edge_weights)
+        edge_std = np.std(list_edge_weights)
+        egonet = ego_graph(G, node_id, radius=1, center=True, undirected=False, distance=None)
+        egonet_node_count = len(egonet.nodes())
+        egonet_degr = len(egonet.edges())
+        egonet_dens = egonet_degr / (egonet_node_count / 2 * (egonet_node_count - 1))
+        betw_centr = 0
+        degr_centr = 0
+        one_hop_histo = 0
+        two_hop_histo = 0
+        n['feature'] = [node_len, node_degr, edge_max, edge_min, edge_avg, edge_std, egonet_degr, egonet_dens, betw_centr, degr_centr, one_hop_histo, two_hop_histo]
 
-    return StellarGraph.from_networkx(nxG, node_features="feature")
+    return G
