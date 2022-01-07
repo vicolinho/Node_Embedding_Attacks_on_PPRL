@@ -1,6 +1,7 @@
+import networkx as nx
 import numpy as np
 import pandas as pd
-from networkx import ego_graph
+from networkx import ego_graph, betweenness_centrality, degree_centrality
 from numpy import Infinity
 from stellargraph import StellarGraph
 
@@ -39,12 +40,15 @@ def add_node_features_vidange_networkx(G):
     # DegrCentr
     # OneHopHisto
     # TwoHopHisto
+    G = nx.Graph(G) # if MultiGraph()
+    betw_centr_dict = betweenness_centrality(G)
+    degr_centr_dict = degree_centrality(G)
     for node_id in G.nodes:
         n = G.nodes[node_id]
         node_len = n['feature'][0]
         list_edge_weights = []
         for nbr, datadict in G.adj[node_id].items():
-            list_edge_weights.append(datadict[0]['weight'])
+            list_edge_weights.append(datadict['weight'])
         node_degr = len(list_edge_weights)
         if node_degr == 0:
             n['feature'] = [node_len, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -57,9 +61,12 @@ def add_node_features_vidange_networkx(G):
         egonet_node_count = len(egonet.nodes())
         egonet_degr = len(egonet.edges())
         egonet_dens = egonet_degr / (egonet_node_count / 2 * (egonet_node_count - 1))
-        betw_centr = 0
-        degr_centr = 0
-        one_hop_histo = 0
+        two_hop_egonet = ego_graph(G, node_id, radius=2, center=True, undirected=False, distance=None)
+        one_hop_degrees = sorted([d for n, d in G.degree(egonet.nodes())], reverse=True)
+        two_hop_degrees = sorted([d for n, d in G.degree(two_hop_egonet.nodes())], reverse=True)
+        betw_centr = betw_centr_dict[node_id]
+        degr_centr = degr_centr_dict[node_id]
+        one_hop_histo = 0 # todo perhaps calculate max degree beforehand to determine size
         two_hop_histo = 0
         n['feature'] = [node_len, node_degr, edge_max, edge_min, edge_avg, edge_std, egonet_degr, egonet_dens, betw_centr, degr_centr, one_hop_histo, two_hop_histo]
 
