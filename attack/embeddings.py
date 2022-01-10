@@ -157,3 +157,17 @@ def generate_node_embeddings_deepgraphinfomax(G):
     y_pred = lr.predict(test_embeddings)
     gcn_acc = (y_pred == test_subjects).mean()
     return
+
+
+def combine_embeddings(embeddings_list, node_ids_list):
+    embeddings = []
+    node_ids = []
+    dict_1 = dict(zip(node_ids_list[0], embeddings_list[0]))
+    for i in range(1, len(embeddings_list)):
+        for j in range(0, len(embeddings_list[i])):
+            dict_1[node_ids_list[i][j]] = np.append(dict_1[node_ids_list[i][j]],embeddings_list[i][j])
+    for key, value in dict_1.items():
+        embeddings.append(value)
+        node_ids.append(key)
+    return embeddings, node_ids
+
