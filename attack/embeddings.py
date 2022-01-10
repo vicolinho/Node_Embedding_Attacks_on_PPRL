@@ -108,10 +108,15 @@ def generate_node_embeddings_graphwave(G):
 
     embeddings = [x.numpy() for x in embeddings_dataset]
     embeddings = np.reshape(embeddings, (len(embeddings), len(embeddings[0][0])))
+    embeddings_transformed = normalize_embeddings(embeddings)
+    return embeddings_transformed, node_ids
+
+
+def normalize_embeddings(embeddings):
     scaler = StandardScaler()
     scaler.fit(embeddings)
     embeddings_transformed = scaler.transform(embeddings)
-    return embeddings_transformed, node_ids
+    return embeddings_transformed
 
 
 def generate_node_embeddings_gcn(G):
@@ -158,6 +163,10 @@ def generate_node_embeddings_deepgraphinfomax(G):
     gcn_acc = (y_pred == test_subjects).mean()
     return
 
+def just_features_embeddings(G):
+    embeddings = G.node_features()
+    embeddings_transformed = normalize_embeddings(embeddings)
+    return embeddings_transformed, G.nodes()
 
 def combine_embeddings(embeddings_list, node_ids_list):
     embeddings = []

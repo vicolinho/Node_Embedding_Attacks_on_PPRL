@@ -19,7 +19,7 @@ def bipartite_graph_to_matches(G, nodes1, nodes2, no_top_pairs):
                 highest_pairs.get()
             nodeid1 = nodes1[int(node1[1:])]
             nodeid2 = nodes2[int(node2[1:])]
-            highest_pairs.put((sim, (nodeid1, nodeid2)))
+            highest_pairs.put((-sim, (nodeid1, nodeid2))) # reverse sim needed to biparitite match
     highest_pairs.get()
     matches = matches_from_priority_queue(highest_pairs)
     return matches

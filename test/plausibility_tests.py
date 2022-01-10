@@ -92,13 +92,13 @@ def main():
     get_graphs_and_matches_funcs = [get_graphs_and_matches_encoded, get_graphs_and_matches_plain, get_graphs_and_matches_cora]
     for func in get_graphs_and_matches_funcs[:2]:
         graph_1, graph_2, combined_graph, true_matches = func()
-        embedding_funcs = [attack.embeddings.generate_node_embeddings_graphwave, attack.embeddings.generate_node_embeddings_graphsage,
+        embedding_funcs = [attack.embeddings.just_features_embeddings, attack.embeddings.generate_node_embeddings_graphwave, attack.embeddings.generate_node_embeddings_graphsage,
                            attack.embeddings.generate_node_embeddings_node2vec]
-        prec = embeddings_two_embeddings(attack.embeddings.generate_node_embeddings_graphwave, attack.embeddings.generate_node_embeddings_graphsage, combined_graph, true_matches)
-        print("Precision one graph:", prec)
-        for embedding_func in embedding_funcs[:2]:
-            #prec = embeddings_two_graphs(embedding_func, graph_1, graph_2, true_matches)
-            #print("Precision two graphs:",prec)
+        #prec = embeddings_two_embeddings(attack.embeddings.generate_node_embeddings_graphwave, attack.embeddings.generate_node_embeddings_graphsage, combined_graph, true_matches)
+        #print("Precision one graph:", prec)
+        for embedding_func in embedding_funcs[:1]:
+            prec = embeddings_two_graphs(embedding_func, graph_1, graph_2, true_matches)
+            print("Precision two graphs:",prec)
             prec2 = embeddings_two_equal_graphs_in_one(embedding_func, combined_graph, true_matches)
             print("Precision one graph:", prec2)
 
