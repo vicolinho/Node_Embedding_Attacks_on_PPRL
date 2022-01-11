@@ -6,7 +6,8 @@ from stellargraph.datasets import datasets
 from stellargraph.globalvar import SOURCE, TARGET
 
 import attack.embeddings
-from attack import blocking, preprocessing, sim_graph, node_matching, node_features, import_data, evaluation
+from attack import blocking, preprocessing, sim_graph, node_matching, node_features, import_data, evaluation, \
+    visualization
 
 import pandas as pd
 
@@ -23,8 +24,8 @@ ENCODED_ATTR = 'base64_bf'
 BF_LENGTH = 1024
 
 def main():
-    plain_data = import_data.import_data_plain(DATA_PLAIN_FILE, 1000, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES)
-    encoded_data = import_data.import_data_encoded(DATA_ENCODED_FILE, 1000, ENCODED_ATTR)
+    plain_data = import_data.import_data_plain(DATA_PLAIN_FILE, 2000, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES)
+    encoded_data = import_data.import_data_encoded(DATA_ENCODED_FILE, 2000, ENCODED_ATTR)
     true_matches = import_data.get_true_matches(plain_data[QGRAMS], encoded_data[ENCODED_ATTR])
     nodes_plain, edges_plain = create_sim_graph_plain(plain_data, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.no_blocking, 0.4, id = 'u')
     nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = 0.4, id = 'v')
@@ -33,18 +34,19 @@ def main():
     graph_plain = node_features.add_node_features_vidange_networkx(StellarGraph.to_networkx(graph_plain))
     graph_encoded = node_features.add_node_features_vidange_networkx(StellarGraph.to_networkx(graph_encoded))
     combined_graph = nx.compose(graph_plain, graph_encoded)
-    #graph_plain = StellarGraph.from_networkx(graph_plain, node_features="feature")
-    #graph_encoded = StellarGraph.from_networkx(graph_encoded, node_features="feature")
+    combined_graph = sim_graph.remove_small_comp_of_graph(combined_graph, min_nodes=3)
     combined_graph = StellarGraph.from_networkx(combined_graph, node_features="feature")
-    #embeddings_1, node_ids_1 = attack.embeddings.generate_node_embeddings_graphsage(graph_plain)
-    #embeddings_2, node_ids_2 = attack.embeddings.generate_node_embeddings_graphsage(graph_encoded)
-    #matches = node_matching.matches_from_embeddings_two_graphs(embeddings_1, embeddings_2, node_ids_1, node_ids_2, 50, prefix_char=True)
-    #precision = evaluation.evalaute_top_pairs(matches, true_matches)
-    #print(precision)
-    embeddings_comb, node_ids_comb = attack.embeddings.generate_node_embeddings_graphsage(combined_graph)
-    matches = node_matching.matches_from_embeddings_combined_graph(embeddings_comb, node_ids_comb, 'u', 'v', 50)
-    precision = evaluation.evalaute_top_pairs(matches, true_matches)
-    print(precision)
+    embedding_funcs = [attack.embeddings.just_features_embeddings,
+                       attack.embeddings.generate_node_embeddings_graphsage,
+                       attack.embeddings.generate_node_embeddings_node2vec,
+                       attack.embeddings.generate_node_embeddings_graphwave]
+    embedding_func_names = ['features', 'graphsage', 'node2vec', 'graphwave']
+    for i in range(0, len(embedding_funcs)):
+        embeddings_comb, node_ids_comb = embedding_funcs[i](combined_graph)
+        visualization.vis(embeddings_comb, node_ids_comb, true_matches)
+        matches = node_matching.matches_from_embeddings_combined_graph(embeddings_comb, node_ids_comb, 'u', 'v', 50)
+        precision = evaluation.evalaute_top_pairs(matches, true_matches)
+        print(embedding_func_names[i], precision)
 
 def estimate_no_hash_func():
     encoded_data = pd.read_csv(DATA_ENCODED_FILE)

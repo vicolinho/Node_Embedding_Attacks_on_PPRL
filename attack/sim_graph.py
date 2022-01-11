@@ -27,3 +27,10 @@ def concat_edge_lists(edges_1, edges_2):
         edges_2 = edges_2.set_index(pd.Index(range(len1, len1 + len2)))
     return pd.concat([edges_1, edges_2])
 
+def remove_small_comp_of_graph(G, min_nodes):
+    for comp in list(nx.connected_components(G)):
+        if len(comp) < min_nodes:
+            for node in comp:
+                G.remove_node(node)
+    return G
+

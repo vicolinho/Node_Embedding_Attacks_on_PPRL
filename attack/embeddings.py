@@ -58,11 +58,11 @@ def generate_node_embeddings_graphsage(G):
         G, nodes=nodes, length=length, number_of_walks=number_of_walks
     )
     batch_size = 50
-    epochs = 4
+    epochs = 10
     num_samples = [10, 5]
     generator = GraphSAGELinkGenerator(G, batch_size, num_samples)
     train_gen = generator.flow(unsupervised_samples)
-    layer_sizes = [200, 200]
+    layer_sizes = [128, 128]
     graphsage = GraphSAGE(
         layer_sizes=layer_sizes, generator=generator, bias=True, dropout=0.0, normalize="l2"
     )
@@ -122,51 +122,10 @@ def normalize_embeddings(embeddings):
 def generate_node_embeddings_gcn(G):
     pass
 
-
-def generate_node_embeddings_deepgraphinfomax(G):
-    fullbatch_generator = FullBatchNodeGenerator(G, sparse=False)
-    gcn_model = GCN(layer_sizes=[128], activations=["relu"], generator=fullbatch_generator)
-
-    corrupted_generator = CorruptedGenerator(fullbatch_generator)
-    gen = corrupted_generator.flow(G.nodes())
-    infomax = DeepGraphInfomax(gcn_model, corrupted_generator)
-    x_in, x_out = infomax.in_out_tensors()
-
-    model = Model(inputs=x_in, outputs=x_out)
-    model.compile(loss=tf.nn.sigmoid_cross_entropy_with_logits, optimizer=Adam(lr=1e-3))
-    epochs = 100
-    es = EarlyStopping(monitor="loss", min_delta=0, patience=20)
-    history = model.fit(gen, epochs=epochs, verbose=0, callbacks=[es])
-    plot_history(history)
-    x_emb_in, x_emb_out = gcn_model.in_out_tensors()
-
-    # for full batch models, squeeze out the batch dim (which is 1)
-    x_out = tf.squeeze(x_emb_out, axis=0)
-    emb_model = Model(inputs=x_emb_in, outputs=x_out)
-
-    node_subjects = G.nodes()
-
-    train_subjects, test_subjects = model_selection.train_test_split(
-        node_subjects, train_size=0.1, test_size=None, stratify=node_subjects
-    )
-
-    test_gen = fullbatch_generator.flow(test_subjects.index)
-    train_gen = fullbatch_generator.flow(train_subjects.index)
-
-    test_embeddings = emb_model.predict(test_gen)
-    train_embeddings = emb_model.predict(train_gen)
-
-    lr = LogisticRegression(multi_class="auto", solver="lbfgs")
-    lr.fit(train_embeddings, train_subjects)
-
-    y_pred = lr.predict(test_embeddings)
-    gcn_acc = (y_pred == test_subjects).mean()
-    return
-
 def just_features_embeddings(G):
     embeddings = G.node_features()
-    embeddings_transformed = normalize_embeddings(embeddings)
-    return embeddings_transformed, G.nodes()
+    embeddings = normalize_embeddings(embeddings)
+    return embeddings, G.nodes()
 
 def combine_embeddings(embeddings_list, node_ids_list):
     embeddings = []
