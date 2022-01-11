@@ -25,7 +25,7 @@ def graphinfomax_same_graph(graph_1, graph_2, true_matches):
 def embeddings_two_graphs(embedding_func, graph_1, graph_2, true_matches):
     embeddings_1, node_ids_1 = embedding_func(graph_1)
     embeddings_2, node_ids_2 = embedding_func(graph_2)
-    matches = node_matching.matches_from_embeddings_two_graphs(embeddings_1, embeddings_2, node_ids_1, node_ids_2, 20)
+    matches = node_matching.matches_from_embeddings_two_graphs(embeddings_1, embeddings_2, node_ids_1, node_ids_2, 20, True)
     precision = evaluation.evalaute_top_pairs(matches, true_matches)
     return precision
 
@@ -60,7 +60,7 @@ def get_graphs_and_matches_encoded():
     graph_1 = StellarGraph.from_networkx(graph_1, node_features="feature")
     graph_2 = StellarGraph.from_networkx(graph_2, node_features="feature")
     combined_graph = StellarGraph.from_networkx(combined_graph, node_features="feature")
-    true_matches = [(id, 'v' + id[1:]) for id in nodes_u.index.to_numpy()]
+    true_matches = [(id[2:], id[2:]) for id in nodes_u.index.to_numpy()]
     return graph_1, graph_2, combined_graph, true_matches
 
 def get_graphs_and_matches_plain():
@@ -77,7 +77,7 @@ def get_graphs_and_matches_plain():
     graph_1 = StellarGraph.from_networkx(graph_1, node_features="feature")
     graph_2 = StellarGraph.from_networkx(graph_2, node_features="feature")
     combined_graph = StellarGraph.from_networkx(combined_graph, node_features="feature")
-    true_matches = [(id, 'v'+id[1:]) for id in nodes_u.index.to_numpy()]
+    true_matches = [(id[2:], id[2:]) for id in nodes_u.index.to_numpy()]
     return graph_1, graph_2, combined_graph, true_matches
 
 def get_graphs_and_matches_cora():
@@ -94,9 +94,9 @@ def main():
         graph_1, graph_2, combined_graph, true_matches = func()
         embedding_funcs = [attack.embeddings.just_features_embeddings, attack.embeddings.generate_node_embeddings_graphwave, attack.embeddings.generate_node_embeddings_graphsage,
                            attack.embeddings.generate_node_embeddings_node2vec]
-        #prec = embeddings_two_embeddings(attack.embeddings.generate_node_embeddings_graphwave, attack.embeddings.generate_node_embeddings_graphsage, combined_graph, true_matches)
-        #print("Precision one graph:", prec)
-        for embedding_func in embedding_funcs[:1]:
+        prec = embeddings_two_embeddings(attack.embeddings.generate_node_embeddings_graphwave, attack.embeddings.generate_node_embeddings_graphsage, combined_graph, true_matches)
+        print("Precision one graph:", prec)
+        for embedding_func in embedding_funcs[:3]:
             prec = embeddings_two_graphs(embedding_func, graph_1, graph_2, true_matches)
             print("Precision two graphs:",prec)
             prec2 = embeddings_two_equal_graphs_in_one(embedding_func, combined_graph, true_matches)
