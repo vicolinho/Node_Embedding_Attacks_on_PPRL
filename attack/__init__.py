@@ -38,15 +38,25 @@ def main():
     combined_graph = StellarGraph.from_networkx(combined_graph, node_features="feature")
     embedding_funcs = [attack.embeddings.just_features_embeddings,
                        attack.embeddings.generate_node_embeddings_graphsage,
-                       attack.embeddings.generate_node_embeddings_node2vec,
-                       attack.embeddings.generate_node_embeddings_graphwave]
-    embedding_func_names = ['features', 'graphsage', 'node2vec', 'graphwave']
+                       attack.embeddings.generate_node_embeddings_graphwave,
+                       attack.embeddings.generate_node_embeddings_node2vec
+                       ]
+    embedding_func_names = ['features', 'graphsage','graphwave', 'node2vec']
+    embeddings_comb, node_ids_comb = [None] * len(embedding_funcs), [None] * len(embedding_funcs)
     for i in range(0, len(embedding_funcs)):
-        embeddings_comb, node_ids_comb = embedding_funcs[i](combined_graph)
-        visualization.vis(embeddings_comb, node_ids_comb, true_matches)
-        matches = node_matching.matches_from_embeddings_combined_graph(embeddings_comb, node_ids_comb, 'u', 'v', 50)
+        embeddings_comb[i], node_ids_comb[i] = embedding_funcs[i](combined_graph)
+        visualization.vis(embeddings_comb[i], node_ids_comb[i], true_matches)
+        matches = node_matching.matches_from_embeddings_combined_graph(embeddings_comb[i], node_ids_comb[i], 'u', 'v', 50)
         precision = evaluation.evalaute_top_pairs(matches, true_matches)
         print(embedding_func_names[i], precision)
+    for i in range(0, len(embedding_funcs)):
+        for j in range(i+1, len(embedding_funcs)):
+            emb, node_ids = attack.embeddings.combine_embeddings([embeddings_comb[i], embeddings_comb[j]], [node_ids_comb[i], node_ids_comb[j]])
+            visualization.vis(emb, node_ids, true_matches)
+            matches = node_matching.matches_from_embeddings_combined_graph(emb, node_ids, 'u',
+                                                                           'v', 50)
+            precision = evaluation.evalaute_top_pairs(matches, true_matches)
+            print(embedding_func_names[i], embedding_func_names[j], precision)
 
 def estimate_no_hash_func():
     encoded_data = pd.read_csv(DATA_ENCODED_FILE)

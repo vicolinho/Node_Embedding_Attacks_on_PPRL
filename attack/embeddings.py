@@ -58,7 +58,7 @@ def generate_node_embeddings_graphsage(G):
         G, nodes=nodes, length=length, number_of_walks=number_of_walks
     )
     batch_size = 50
-    epochs = 10
+    epochs = 4
     num_samples = [10, 5]
     generator = GraphSAGELinkGenerator(G, batch_size, num_samples)
     train_gen = generator.flow(unsupervised_samples)
