@@ -25,7 +25,8 @@ def graphinfomax_same_graph(graph_1, graph_2, true_matches):
 def embeddings_two_graphs(embedding_func, graph_1, graph_2, true_matches):
     embeddings_1, node_ids_1 = embedding_func(graph_1)
     embeddings_2, node_ids_2 = embedding_func(graph_2)
-    matches = node_matching.matches_from_embeddings_two_graphs(embeddings_1, embeddings_2, node_ids_1, node_ids_2, 20, True)
+    matches = node_matching.matches_from_embeddings_two_graphs(embeddings_1, embeddings_2, node_ids_1, node_ids_2, 20,
+                                                               True, 0.0)
     precision = evaluation.evalaute_top_pairs(matches, true_matches)
     return precision
 
@@ -34,7 +35,7 @@ def embeddings_two_embeddings(embedding_func_1, embedding_func_2, combined_graph
     embeddings_2, node_ids_2 = embedding_func_2(combined_graph)
     embeddings_comb, node_ids_comb = embeddings.combine_embeddings([embeddings_1, embeddings_2], [node_ids_1, node_ids_2])
     visualization.vis(embeddings_comb, node_ids_comb, true_matches)
-    matches = node_matching.matches_from_embeddings_combined_graph(embeddings_comb, node_ids_comb, 'u', 'v', 20)
+    matches = node_matching.matches_from_embeddings_combined_graph(embeddings_comb, node_ids_comb, 'u', 'v', 20, 0.0)
     precision = evaluation.evalaute_top_pairs(matches, true_matches)
     return precision
 
@@ -57,17 +58,12 @@ def get_graphs_and_matches_encoded():
 
 
 def nodes_edges_to_graphs_matches(edges_u, edges_v, nodes_u, nodes_v):
-    graph_1 = StellarGraph(nodes_u, edges_u)
-    graph_2 = StellarGraph(nodes_v, edges_v)
-    graph_1 = node_features.add_node_features_vidange_networkx(StellarGraph.to_networkx(graph_1))
-    graph_2 = node_features.add_node_features_vidange_networkx(StellarGraph.to_networkx(graph_2))
-    graph_1 = sim_graph.remove_small_comp_of_graph(graph_1, min_nodes=3)
-    graph_2 = sim_graph.remove_small_comp_of_graph(graph_2, min_nodes=3)
+    graph_1 = sim_graph.create_graph(nodes_u, edges_u, min_nodes=3)
+    graph_2 = sim_graph.create_graph(nodes_v, edges_v, min_nodes=3)
     combined_graph = nx.compose(graph_1, graph_2)
-    combined_graph = sim_graph.remove_small_comp_of_graph(combined_graph, min_nodes=3)
+    combined_graph = StellarGraph.from_networkx(combined_graph, node_features="feature")
     graph_1 = StellarGraph.from_networkx(graph_1, node_features="feature")
     graph_2 = StellarGraph.from_networkx(graph_2, node_features="feature")
-    combined_graph = StellarGraph.from_networkx(combined_graph, node_features="feature")
     true_matches = [(id[2:], id[2:]) for id in nodes_u.index.to_numpy()]
     return combined_graph, graph_1, graph_2, true_matches
 

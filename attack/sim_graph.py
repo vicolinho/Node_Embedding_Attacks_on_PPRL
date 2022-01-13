@@ -1,12 +1,19 @@
 import networkx as nx
-import pandas as pd
 from stellargraph import StellarGraph
-from stellargraph.globalvar import SOURCE, TARGET
+
+from attack import node_features
 
 STELLAR_GRAPH = 'stellargraph'
 
 def adjust_node_id(name, prefix):
     return prefix + "_" + str(name)
+
+def create_graph(nodes, edges, min_nodes):
+    G = nx.from_pandas_edgelist(edges, edge_attr=True)
+    G = remove_small_comp_of_graph(G, min_nodes)
+    G = node_features.add_node_features_vidange_networkx(G, nodes)
+    return G
+
 
 def read_both_graphs(graph_plain_file, graph_encoded_file, library = STELLAR_GRAPH):
     graph_plain = nx.read_gpickle(graph_plain_file)
@@ -17,15 +24,6 @@ def read_both_graphs(graph_plain_file, graph_encoded_file, library = STELLAR_GRA
         graph_encoded = StellarGraph.from_networkx(graph_encoded)
         print(graph_encoded.info())
     return graph_plain, graph_encoded
-
-def concat_edge_lists(edges_1, edges_2):
-    # attributes first, second, weight
-    len1 = len(edges_1)
-    len2 = len(edges_2)
-    for attr in [SOURCE, TARGET]:
-        edges_2[attr] = edges_2[attr].astype(str)
-        edges_2 = edges_2.set_index(pd.Index(range(len1, len1 + len2)))
-    return pd.concat([edges_1, edges_2])
 
 def remove_small_comp_of_graph(G, min_nodes):
     for comp in list(nx.connected_components(G)):

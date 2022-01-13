@@ -25,27 +25,30 @@ def bipartite_graph_to_matches(G, nodes1, nodes2, no_top_pairs):
     return matches
 
 
-def embeddings_to_bipartite_graph(embeddings1, embeddings2):
+def embeddings_to_bipartite_graph(embeddings1, embeddings2, threshold):
     source = []
     target = []
     weight = []
     cos_sims = cosine_similarity(embeddings1, embeddings2)
     for x in range(0, len(embeddings1)):
         for y in range(0, len(embeddings2)):
-            source.append(U+str(x))
-            target.append(V+str(y))
-            weight.append(-cos_sims[x,y]) # needed to use minimum weight matching
+            sim = cos_sims[x,y]
+            if sim >= threshold:
+                source.append(U+str(x))
+                target.append(V+str(y))
+                weight.append(-sim) # needed to use minimum weight matching
     edges = DataFrame({SOURCE: source, TARGET: target, WEIGHT: weight})
     return nx.from_pandas_edgelist(edges, edge_attr=True)
 
-def matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, prefix_char = False):
-    matches = bipartite_graph_to_matches(embeddings_to_bipartite_graph(embeddings1, embeddings2), nodes1, nodes2, no_top_pairs)
+def matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, prefix_char=False,
+                                       threshold=0.3):
+    matches = bipartite_graph_to_matches(embeddings_to_bipartite_graph(embeddings1, embeddings2, threshold), nodes1, nodes2, no_top_pairs)
     if prefix_char:
         return remove_prefix_from_matches(matches)
     else:
         return matches
 
-def matches_from_embeddings_combined_graph(embeddings, nodes, id1, id2, no_top_pairs):
+def matches_from_embeddings_combined_graph(embeddings, nodes, id1, id2, no_top_pairs, threshold = 0.3):
     embeddings1 = []
     embeddings2 = []
     nodes1 = []
@@ -57,7 +60,7 @@ def matches_from_embeddings_combined_graph(embeddings, nodes, id1, id2, no_top_p
         elif nodes[i][0] == id2:
             nodes2.append(nodes[i])
             embeddings2.append(embeddings[i])
-    return matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, True)
+    return matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, True, threshold)
 
 def remove_prefix_from_matches(matches):
     adapted_matches = []
