@@ -146,13 +146,10 @@ def combine_embeddings(embeddings_list, node_ids_list):
 
 def create_learning_G_from_true_matches_graphsage(G, true_matches):
     true_matches = [("u_"+t[0], "v_"+t[1]) for t in true_matches]
-    l = list(map(list, true_matches))
-    flat_list_matches = [item for sublist in l for item in sublist]
-    learning_nodes = np.unique(flat_list_matches)
-    learning_graph = G.subgraph(learning_nodes)
+    learning_graph = G.copy() # keeping node attributes
     learning_graph = nx.create_empty_copy(learning_graph)
     learning_graph.add_edges_from(true_matches)
-    learning_graph = learning_graph.subgraph(learning_nodes)
+    learning_graph = learning_graph.subgraph(G.nodes())
     return StellarGraph.from_networkx(learning_graph, node_features="feature")
 
 
