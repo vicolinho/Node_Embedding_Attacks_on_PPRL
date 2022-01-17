@@ -30,26 +30,54 @@ def main():
     nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = 0.4, id = 'v')
     graph_plain = sim_graph.create_graph(nodes_plain, edges_plain, min_nodes=3)
     graph_encoded = sim_graph.create_graph(nodes_encoded, edges_encoded, min_nodes=3)
-    combined_graph = nx.compose(graph_plain, graph_encoded)
-    combined_graph = StellarGraph.from_networkx(combined_graph, node_features="feature")
+    combined_graph_nx = nx.compose(graph_plain, graph_encoded)
+    combined_graph = StellarGraph.from_networkx(combined_graph_nx, node_features="feature")
     embedding_funcs = [attack.embeddings.just_features_embeddings,
-                       attack.embeddings.generate_node_embeddings_graphsage,
-                       attack.embeddings.generate_node_embeddings_graphwave]
-    embedding_func_names = ['features', 'graphsage','graphwave']
-    embeddings_comb, node_ids_comb = [None] * len(embedding_funcs), [None] * len(embedding_funcs)
+                       attack.embeddings.generate_node_embeddings_graphsage]
+                       #attack.embeddings.generate_node_embeddings_graphwave]
+    embedding_func_names = ['features', 'graphsage',
+      #  'graphwave',
+        'graphsage_alt']
+    embeddings_comb, node_ids_comb = [None] * len(embedding_func_names), [None] * len(embedding_func_names)
     for i in range(0, len(embedding_funcs)):
         embeddings_comb[i], node_ids_comb[i] = embedding_funcs[i](combined_graph)
-        visualization.vis(embeddings_comb[i], node_ids_comb[i], true_matches)
-        matches = node_matching.matches_from_embeddings_combined_graph(embeddings_comb[i], node_ids_comb[i], 'u', 'v', 50, 0.3)
-        precision = evaluation.evalaute_top_pairs(matches, true_matches)
-        print(embedding_func_names[i], precision)
+        prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches)
+
+    i = len(embedding_funcs)
+    learning_G = attack.embeddings.create_learning_G_from_true_matches_graphsage(combined_graph_nx, true_matches)
+    embeddings_comb[i], node_ids_comb[i] = attack.embeddings.generate_node_embeddings_graphsage(combined_graph, learning_G)
+    prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches)
+
+    prec_combined_embeddings([0,2], embedding_func_names, embeddings_comb, node_ids_comb, true_matches)
+    #prec_combined_embeddings([0, 1, 2], embedding_func_names, embeddings_comb, node_ids_comb, true_matches)
+    prec_combined_embeddings([0, 0, 2], embedding_func_names, embeddings_comb, node_ids_comb, true_matches)
+    prec_combined_embeddings([0, 1, 0], embedding_func_names, embeddings_comb, node_ids_comb, true_matches)
     for i in range(0, len(embedding_funcs)):
         for j in range(i+1, len(embedding_funcs)):
-            emb, node_ids = attack.embeddings.combine_embeddings([embeddings_comb[i], embeddings_comb[j]], [node_ids_comb[i], node_ids_comb[j]])
-            visualization.vis(emb, node_ids, true_matches)
-            matches = node_matching.matches_from_embeddings_combined_graph(emb, node_ids, 'u', 'v', 50, 0.3)
-            precision = evaluation.evalaute_top_pairs(matches, true_matches)
-            print(embedding_func_names[i], embedding_func_names[j], precision)
+            prec_combined_embeddings([i,j],embedding_func_names, embeddings_comb, node_ids_comb, true_matches)
+
+
+def prec_vis_embeddings(embeddings_comb, node_ids_comb, embedding_func_name, true_matches):
+    #embeddings_comb, node_ids_comb = embedding_func(combined_graph)
+    visualization.vis(embeddings_comb, node_ids_comb, true_matches)
+    matches = node_matching.matches_from_embeddings_combined_graph(embeddings_comb, node_ids_comb, 'u', 'v', 50,
+                                                                   0.3)
+    precision = evaluation.evalaute_top_pairs(matches, true_matches)
+    print(embedding_func_name, precision)
+    return embeddings_comb, node_ids_comb
+
+
+def prec_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb, true_matches):
+    embeddings_comb_list = [embeddings_comb[i] for i in list_ids]
+    ids_comb_list = [node_ids_comb[i] for i in list_ids]
+    embeddings_func_list = [embedding_func_names[i] for i in list_ids]
+
+    emb, node_ids = attack.embeddings.combine_embeddings(embeddings_comb_list, ids_comb_list)
+    visualization.vis(emb, node_ids, true_matches)
+    matches = node_matching.matches_from_embeddings_combined_graph(emb, node_ids, 'u', 'v', 50, 0.3)
+    precision = evaluation.evalaute_top_pairs(matches, true_matches)
+    print(*embeddings_func_list, precision)
+
 
 def estimate_no_hash_func():
     encoded_data = pd.read_csv(DATA_ENCODED_FILE)

@@ -1,9 +1,12 @@
+import networkx as nx
 import numpy as np
+import stellargraph.core.convert
 import tensorflow as tf
 from gensim.models import Word2Vec
 from sklearn import model_selection
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
+from stellargraph import StellarGraph
 from stellargraph.data import BiasedRandomWalk, UnsupervisedSampler
 from stellargraph.layer import GraphSAGE, link_classification, GCN, DeepGraphInfomax
 from stellargraph.mapper import GraphSAGELinkGenerator, GraphSAGENodeGenerator, GraphWaveGenerator, \
@@ -48,19 +51,20 @@ def add_node_features_to_embeddings(node_embeddings, node_ids, node_weights, cou
     return node_embeddings_new
 
 
-def generate_node_embeddings_graphsage(G):
+def generate_node_embeddings_graphsage(G, learning_G = None):
     # https://stellargraph.readthedocs.io/en/stable/demos/embeddings/graphsage-unsupervised-sampler-embeddings.html
-
-    nodes = list(G.nodes())
+    if learning_G == None:
+        learning_G = G
+    learning_nodes = list(learning_G.nodes())
     number_of_walks = 1
     length = 5
     unsupervised_samples = UnsupervisedSampler(
-        G, nodes=nodes, length=length, number_of_walks=number_of_walks
+        learning_G, nodes=learning_nodes, length=length, number_of_walks=number_of_walks
     )
     batch_size = 50
-    epochs = 4
+    epochs = 10
     num_samples = [10, 5]
-    generator = GraphSAGELinkGenerator(G, batch_size, num_samples)
+    generator = GraphSAGELinkGenerator(learning_G, batch_size, num_samples)
     train_gen = generator.flow(unsupervised_samples)
     layer_sizes = [128, 128]
     graphsage = GraphSAGE(
@@ -89,6 +93,7 @@ def generate_node_embeddings_graphsage(G):
     x_inp_src = x_inp[0::2]
     x_out_src = x_out[0]
     embedding_model = keras.Model(inputs=x_inp_src, outputs=x_out_src)
+    nodes = list(G.nodes())
     node_gen = GraphSAGENodeGenerator(G, batch_size, num_samples).flow(nodes)
     node_embeddings = embedding_model.predict(node_gen, workers=4, verbose=1)
 
@@ -138,4 +143,18 @@ def combine_embeddings(embeddings_list, node_ids_list):
         embeddings.append(value)
         node_ids.append(key)
     return embeddings, node_ids
+
+def create_learning_G_from_true_matches_graphsage(G, true_matches):
+    true_matches = [("u_"+t[0], "v_"+t[1]) for t in true_matches]
+    l = list(map(list, true_matches))
+    flat_list_matches = [item for sublist in l for item in sublist]
+    learning_nodes = np.unique(flat_list_matches)
+    learning_graph = G.subgraph(learning_nodes)
+    learning_graph = nx.create_empty_copy(learning_graph)
+    learning_graph.add_edges_from(true_matches)
+    learning_graph = G.subgraph(learning_nodes)
+    return StellarGraph.from_networkx(learning_graph, node_features="feature")
+
+
+
 

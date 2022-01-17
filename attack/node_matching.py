@@ -11,7 +11,8 @@ V = 'v'
 
 def bipartite_graph_to_matches(G, nodes1, nodes2, no_top_pairs):
     highest_pairs = PriorityQueue()
-    matches = nx.bipartite.minimum_weight_full_matching(G)
+    u = [n for n in G.nodes if n[0] == U]
+    matches = nx.bipartite.minimum_weight_full_matching(G, u)
     for node1, node2 in matches.items():
         if node1[0] == U:
             sim = G.get_edge_data(node1, node2)[WEIGHT]
