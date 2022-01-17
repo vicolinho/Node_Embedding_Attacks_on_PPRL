@@ -152,7 +152,7 @@ def create_learning_G_from_true_matches_graphsage(G, true_matches):
     learning_graph = G.subgraph(learning_nodes)
     learning_graph = nx.create_empty_copy(learning_graph)
     learning_graph.add_edges_from(true_matches)
-    learning_graph = G.subgraph(learning_nodes)
+    learning_graph = learning_graph.subgraph(learning_nodes)
     return StellarGraph.from_networkx(learning_graph, node_features="feature")
 
 
