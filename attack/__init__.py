@@ -2,18 +2,16 @@ import networkx as nx
 import numpy as np
 from pandas import DataFrame
 from stellargraph import StellarGraph
-from stellargraph.datasets import datasets
-from stellargraph.globalvar import SOURCE, TARGET
 
-import attack.embeddings
-from attack import blocking, preprocessing, sim_graph, node_matching, node_features, import_data, evaluation, \
+import embeddings
+import blocking, preprocessing, sim_graph, node_matching, node_features, import_data, evaluation, \
     visualization
 
 import pandas as pd
 
-from attack.preprocessing import BITARRAY, get_bigrams, QGRAMS
-from attack.similarities import edges_df_from_blk_plain, edges_df_from_blk_bf, edges_df_from_blk_bf_adjusted
-from attack.analysis import false_negative_rate, get_num_hash_function
+from preprocessing import BITARRAY, get_bigrams, QGRAMS
+from similarities import edges_df_from_blk_plain, edges_df_from_blk_bf, edges_df_from_blk_bf_adjusted
+from analysis import false_negative_rate, get_num_hash_function
 
 DATA_PLAIN_FILE = "pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a.csv"
 DATA_ENCODED_FILE = "pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a_encoded_fn_ln.csv"
@@ -32,9 +30,9 @@ def main():
     graph_encoded = sim_graph.create_graph(nodes_encoded, edges_encoded, min_nodes=3)
     combined_graph_nx = nx.compose(graph_plain, graph_encoded)
     combined_graph = StellarGraph.from_networkx(combined_graph_nx, node_features="feature")
-    embedding_funcs = [attack.embeddings.just_features_embeddings,
-                       attack.embeddings.generate_node_embeddings_graphsage]
-                       #attack.embeddings.generate_node_embeddings_graphwave]
+    embedding_funcs = [embeddings.just_features_embeddings,
+                       embeddings.generate_node_embeddings_graphsage]
+                       #embeddings.generate_node_embeddings_graphwave]
     embedding_func_names = ['features', 'graphsage',
       #  'graphwave',
         'graphsage_alt']
@@ -44,8 +42,8 @@ def main():
         prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches)
 
     i = len(embedding_funcs)
-    learning_G = attack.embeddings.create_learning_G_from_true_matches_graphsage(combined_graph_nx, true_matches)
-    embeddings_comb[i], node_ids_comb[i] = attack.embeddings.generate_node_embeddings_graphsage(combined_graph, learning_G)
+    learning_G = embeddings.create_learning_G_from_true_matches_graphsage(combined_graph_nx, true_matches)
+    embeddings_comb[i], node_ids_comb[i] = embeddings.generate_node_embeddings_graphsage(combined_graph, learning_G)
     prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches)
 
     prec_combined_embeddings([0,2], embedding_func_names, embeddings_comb, node_ids_comb, true_matches)
@@ -72,7 +70,7 @@ def prec_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, no
     ids_comb_list = [node_ids_comb[i] for i in list_ids]
     embeddings_func_list = [embedding_func_names[i] for i in list_ids]
 
-    emb, node_ids = attack.embeddings.combine_embeddings(embeddings_comb_list, ids_comb_list)
+    emb, node_ids = embeddings.combine_embeddings(embeddings_comb_list, ids_comb_list)
     visualization.vis(emb, node_ids, true_matches)
     matches = node_matching.matches_from_embeddings_combined_graph(emb, node_ids, 'u', 'v', 50, 0.3)
     precision = evaluation.evalaute_top_pairs(matches, true_matches)

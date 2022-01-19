@@ -5,8 +5,8 @@ from networkx import ego_graph, betweenness_centrality, degree_centrality
 from numpy import Infinity
 from stellargraph import StellarGraph
 
-from attack import sim_graph
-from attack.adjust_sims import compute_number_of_qgrams
+import sim_graph
+from adjust_sims import compute_number_of_qgrams
 
 
 def qgram_count_plain(series_qgrams, id):

@@ -3,7 +3,7 @@ import random
 from bitarray import bitarray
 from pandas import DataFrame
 
-from attack.preprocessing import BITARRAY
+from preprocessing import BITARRAY
 
 LSH_BLOCKING = 'lsh_blocking'
 BLOCKING = 'blocking'

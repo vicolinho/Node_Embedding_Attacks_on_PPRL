@@ -28,7 +28,7 @@ def vis(node_embeddings, node_ids, true_matches):
     plt.title(
         "{} visualization of GraphSAGE embeddings for dataset".format(transform.__name__)
     )
-    plt.show()
+    #plt.show()
 
 
 def add_color_attr(emb_transformed, true_matches):

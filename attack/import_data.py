@@ -1,6 +1,6 @@
 import pandas as pd
 
-from attack import preprocessing
+import preprocessing
 
 
 def get_true_matches(series_qgrams, series_encoded_attr):

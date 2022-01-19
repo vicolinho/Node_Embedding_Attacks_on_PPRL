@@ -1,7 +1,7 @@
 import math
 from functools import reduce
 
-from attack import BITARRAY, QGRAMS
+from preprocessing import BITARRAY, QGRAMS
 
 
 def p_equal_bits(freq_1s, dice_sim):

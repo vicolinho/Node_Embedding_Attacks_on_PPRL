@@ -2,7 +2,7 @@ import networkx as nx
 from stellargraph import StellarGraph
 from stellargraph.datasets import datasets
 
-import attack.embeddings
+import embeddings
 from attack import import_data, ENCODED_ATTR, \
     create_sim_graph_encoded, BF_LENGTH, sim_graph, node_matching, evaluation, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, \
     create_sim_graph_plain, blocking, node_features, embeddings, visualization
@@ -11,13 +11,13 @@ DATA_ENCODED_FILE = '../pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1
 DATA_PLAIN_FILE = '../pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a.csv'
 
 def graphwave_same_graph(graph_1, graph_2, true_matches):
-    embeddings_two_graphs(attack.embeddings.generate_node_embeddings_graphwave, graph_1, graph_2, true_matches)
+    embeddings_two_graphs(embeddings.generate_node_embeddings_graphwave, graph_1, graph_2, true_matches)
 
 def graphsage_same_graph(graph_1, graph_2, true_matches):
-    embeddings_two_graphs(attack.embeddings.generate_node_embeddings_graphsage, graph_1, graph_2, true_matches)
+    embeddings_two_graphs(embeddings.generate_node_embeddings_graphsage, graph_1, graph_2, true_matches)
 
 def node2vec_same_graph(graph_1, graph_2, true_matches):
-    embeddings_two_graphs(attack.embeddings.generate_node_embeddings_node2vec, graph_1, graph_2, true_matches)
+    embeddings_two_graphs(embeddings.generate_node_embeddings_node2vec, graph_1, graph_2, true_matches)
 
 def graphinfomax_same_graph(graph_1, graph_2, true_matches):
     embeddings_two_graphs(attack.embeddings.generate_node_embeddings_deepgraphinfomax, graph_1, graph_2, true_matches)
