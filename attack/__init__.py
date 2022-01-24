@@ -8,24 +8,29 @@ import blocking, preprocessing, sim_graph, node_matching, node_features, import_
     visualization
 
 import pandas as pd
-
+import argparse
 from preprocessing import BITARRAY, get_bigrams, QGRAMS
 from similarities import edges_df_from_blk_plain, edges_df_from_blk_bf, edges_df_from_blk_bf_adjusted
 from analysis import false_negative_rate, get_num_hash_function
 
-DATA_PLAIN_FILE = "pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a.csv"
-DATA_ENCODED_FILE = "pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a_encoded_fn_ln.csv"
+#DATA_PLAIN_FILE = "pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a.csv"
+#DATA_ENCODED_FILE = "pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a_encoded_fn_ln.csv"
 QGRAM_ATTRIBUTES = ['first_name', 'last_name']
 BLK_ATTRIBUTES = ['first_name']#, 'last_name']
 ENCODED_ATTR = 'base64_bf'
 BF_LENGTH = 1024
 
 def main():
-    plain_data = import_data.import_data_plain(DATA_PLAIN_FILE, 1000, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES)
-    encoded_data = import_data.import_data_encoded(DATA_ENCODED_FILE, 1000, ENCODED_ATTR)
+    parser = argparser()
+    removed_plain_record_frac = float(parser.remove_frac_plain)
+    record_count = int(parser.record_count)
+    threshold = float(parser.threshold)
+    plain_data = import_data.import_data_plain(parser.plain_file, record_count, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES)
+    encoded_data = import_data.import_data_encoded(parser.encoded_file, record_count, ENCODED_ATTR)
     true_matches = import_data.get_true_matches(plain_data[QGRAMS], encoded_data[ENCODED_ATTR])
-    nodes_plain, edges_plain = create_sim_graph_plain(plain_data, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.no_blocking, 0.4, id = 'u')
-    nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = 0.4, id = 'v')
+    plain_data = plain_data.sample(frac = 1 - removed_plain_record_frac)
+    nodes_plain, edges_plain = create_sim_graph_plain(plain_data, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.no_blocking, threshold, id = 'u')
+    nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = threshold, id = 'v')
     graph_plain = sim_graph.create_graph(nodes_plain, edges_plain, min_nodes=3)
     graph_encoded = sim_graph.create_graph(nodes_encoded, edges_encoded, min_nodes=3)
     combined_graph_nx = nx.compose(graph_plain, graph_encoded)
@@ -111,6 +116,16 @@ def create_sim_graph_plain(plain_data, qgram_attributes, blk_attributes, blk_fun
     blk_dicts_plain = blocking.get_dict_dataframes_by_blocking_keys_plain(plain_data, blk_attributes, blk_func)
     edges = edges_df_from_blk_plain(blk_dicts_plain, qgram_attributes, threshold, id)
     return nodes, edges
+
+def argparser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("plain_file", help='path to plain dataset')
+    parser.add_argument("encoded_file", help='path to encoded dataset')
+    parser.add_argument("threshold", help='similarity threshold to be included in graph')
+    parser.add_argument("--remove_frac_plain", help='fraction')
+    parser.add_argument("--record_count", help='restrict record count to be processed')
+    args = parser.parse_args()
+    return args
 
 if __name__ == '__main__':
     import time

@@ -6,7 +6,7 @@ from stellargraph.globalvar import SOURCE, TARGET, WEIGHT
 
 from preprocessing import QGRAMS
 import sim_graph
-from preprocessing import BITARRAY, add_qgrams_as_key
+from preprocessing import BITARRAY
 from adjust_sims import compute_real_dice_from_bits
 
 

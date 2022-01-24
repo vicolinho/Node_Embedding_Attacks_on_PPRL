@@ -58,4 +58,5 @@ def get_bigrams(*args):
     return frozenset(s)
 
 
+
 QGRAMS = 'qgrams'
