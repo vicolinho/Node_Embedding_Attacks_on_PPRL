@@ -82,20 +82,20 @@ def prec_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, no
     print(*embeddings_func_list, precision)
 
 
-def estimate_no_hash_func():
-    encoded_data = pd.read_csv(DATA_ENCODED_FILE)
-    #encoded_data = encoded_data.head(10000)
+def estimate_no_hash_func(encoded_file, plain_file, sample_size):
+    encoded_data = pd.read_csv(encoded_file)
+    encoded_data = encoded_data.head(sample_size)
     encoded_data = preprocessing.preprocess_encoded_df(encoded_data, ENCODED_ATTR)
-    plain_data = pd.read_csv(DATA_PLAIN_FILE, na_filter=False)
-    #plain_data = plain_data.head(10000)
+    plain_data = pd.read_csv(plain_file, na_filter=False)
+    plain_data = plain_data.head(sample_size)
     cols = []
     for attribute in QGRAM_ATTRIBUTES:
         cols.append(plain_data[attribute])
     plain_data[QGRAMS] = list(map(get_bigrams, *cols))
     return get_num_hash_function(plain_data, encoded_data)
 
-def play_around_with_lsh_parameters():
-    encoded_data = pd.read_csv(DATA_ENCODED_FILE)
+def play_around_with_lsh_parameters(encoded_file):
+    encoded_data = pd.read_csv(encoded_file)
     encoded_data = encoded_data.head(3000)
     encoded_data = preprocessing.preprocess_encoded_df(encoded_data, ENCODED_ATTR)
     for i in np.arange(0.1, 1, 0.05):
