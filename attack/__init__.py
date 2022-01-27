@@ -44,42 +44,53 @@ def main():
     embeddings_comb, node_ids_comb = [None] * len(embedding_func_names), [None] * len(embedding_func_names)
     for i in range(0, len(embedding_funcs)):
         embeddings_comb[i], node_ids_comb[i] = embedding_funcs[i](combined_graph)
-        prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches)
+        func_list, prec = prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches)
+        evaluation.output_result(func_list, prec, parser.results_path, record_count, threshold, removed_plain_record_frac)
 
     i = len(embedding_funcs)
     learning_G = embeddings.create_learning_G_from_true_matches_graphsage(combined_graph_nx, true_matches)
     embeddings_comb[i], node_ids_comb[i] = embeddings.generate_node_embeddings_graphsage(combined_graph, learning_G)
-    prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches)
-
-    prec_combined_embeddings([0,2], embedding_func_names, embeddings_comb, node_ids_comb, true_matches)
-    #prec_combined_embeddings([0, 1, 2], embedding_func_names, embeddings_comb, node_ids_comb, true_matches)
-    prec_combined_embeddings([0, 0, 2], embedding_func_names, embeddings_comb, node_ids_comb, true_matches)
-    prec_combined_embeddings([0, 1, 0], embedding_func_names, embeddings_comb, node_ids_comb, true_matches)
+    func_list, prec = prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches)
+    evaluation.output_result(func_list, prec, parser.results_path, record_count, threshold, removed_plain_record_frac)
     for i in range(0, len(embedding_funcs)):
         for j in range(i+1, len(embedding_funcs)):
-            prec_combined_embeddings([i,j],embedding_func_names, embeddings_comb, node_ids_comb, true_matches)
+            print_precision_combined_embeddings([i,j], embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path,
+                                                record_count, removed_plain_record_frac, threshold, true_matches)
+    print_precision_combined_embeddings([0, 2],embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path, record_count,
+                                        removed_plain_record_frac, threshold, true_matches)
+    print_precision_combined_embeddings([0, 0, 2], embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path,
+                                        record_count, removed_plain_record_frac, threshold, true_matches)
+    print_precision_combined_embeddings([0, 1, 0], embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path,
+                                        record_count, removed_plain_record_frac, threshold, true_matches)
+
+
+def print_precision_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb, results_path, record_count,
+                                        removed_plain_record_frac, threshold, true_matches):
+    func_list, prec = prec_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb,
+                                               true_matches)
+    evaluation.output_result(func_list, prec, results_path, record_count, threshold, removed_plain_record_frac)
 
 
 def prec_vis_embeddings(embeddings_comb, node_ids_comb, embedding_func_name, true_matches):
-    #embeddings_comb, node_ids_comb = embedding_func(combined_graph)
     visualization.vis(embeddings_comb, node_ids_comb, true_matches)
     matches = node_matching.matches_from_embeddings_combined_graph(embeddings_comb, node_ids_comb, 'u', 'v', 50,
                                                                    0.3)
     precision = evaluation.evalaute_top_pairs(matches, true_matches)
     print(embedding_func_name, precision)
-    return embeddings_comb, node_ids_comb
+    return embedding_func_name, precision
 
 
 def prec_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb, true_matches):
     embeddings_comb_list = [embeddings_comb[i] for i in list_ids]
     ids_comb_list = [node_ids_comb[i] for i in list_ids]
-    embeddings_func_list = [embedding_func_names[i] for i in list_ids]
+    embeddings_func_list = ' '.join([embedding_func_names[i] for i in list_ids])
 
     emb, node_ids = embeddings.combine_embeddings(embeddings_comb_list, ids_comb_list)
     visualization.vis(emb, node_ids, true_matches)
     matches = node_matching.matches_from_embeddings_combined_graph(emb, node_ids, 'u', 'v', 50, 0.3)
     precision = evaluation.evalaute_top_pairs(matches, true_matches)
-    print(*embeddings_func_list, precision)
+    print(embeddings_func_list, precision)
+    return embeddings_func_list, precision
 
 
 def estimate_no_hash_func(encoded_file, plain_file, sample_size):
@@ -121,8 +132,9 @@ def argparser():
     parser = argparse.ArgumentParser()
     parser.add_argument("plain_file", help='path to plain dataset')
     parser.add_argument("encoded_file", help='path to encoded dataset')
+    parser.add_argument("results_path", help='path to results output file')
     parser.add_argument("threshold", help='similarity threshold to be included in graph')
-    parser.add_argument("--remove_frac_plain", help='fraction')
+    parser.add_argument("--remove_frac_plain", help='fraction of plain records to be excluded')
     parser.add_argument("--record_count", help='restrict record count to be processed')
     args = parser.parse_args()
     return args
