@@ -8,10 +8,10 @@ STELLAR_GRAPH = 'stellargraph'
 def adjust_node_id(name, prefix):
     return prefix + "_" + str(name)
 
-def create_graph(nodes, edges, min_nodes):
+def create_graph(nodes, edges, min_nodes, max_degree):
     G = nx.from_pandas_edgelist(edges, edge_attr=True)
     G = remove_small_comp_of_graph(G, min_nodes)
-    G = node_features.add_node_features_vidange_networkx(G, nodes)
+    G = node_features.add_node_features_vidange_networkx(G, nodes, max_degree)
     return G
 
 

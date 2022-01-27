@@ -1,3 +1,5 @@
+import math
+
 import networkx as nx
 import numpy as np
 from pandas import DataFrame
@@ -31,8 +33,9 @@ def main():
     plain_data = plain_data.sample(frac = 1 - removed_plain_record_frac)
     nodes_plain, edges_plain = create_sim_graph_plain(plain_data, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.no_blocking, threshold, id = 'u')
     nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = threshold, id = 'v')
-    graph_plain = sim_graph.create_graph(nodes_plain, edges_plain, min_nodes=3)
-    graph_encoded = sim_graph.create_graph(nodes_encoded, edges_encoded, min_nodes=3)
+    max_degree = max(len(nodes_plain), len(nodes_encoded)) - 1
+    graph_plain = sim_graph.create_graph(nodes_plain, edges_plain, min_nodes=3, max_degree=max_degree)
+    graph_encoded = sim_graph.create_graph(nodes_encoded, edges_encoded, min_nodes=3, max_degree=max_degree)
     combined_graph_nx = nx.compose(graph_plain, graph_encoded)
     combined_graph = StellarGraph.from_networkx(combined_graph_nx, node_features="feature")
     embedding_funcs = [embeddings.just_features_embeddings,
@@ -45,30 +48,32 @@ def main():
     for i in range(0, len(embedding_funcs)):
         embeddings_comb[i], node_ids_comb[i] = embedding_funcs[i](combined_graph)
         func_list, prec = prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches)
-        evaluation.output_result(func_list, prec, parser.results_path, record_count, threshold, removed_plain_record_frac)
+        evaluation.output_result(func_list, prec, parser.results_path, record_count, threshold,
+                                 removed_plain_record_frac, parser.histo_features)
 
     i = len(embedding_funcs)
     learning_G = embeddings.create_learning_G_from_true_matches_graphsage(combined_graph_nx, true_matches)
     embeddings_comb[i], node_ids_comb[i] = embeddings.generate_node_embeddings_graphsage(combined_graph, learning_G)
     func_list, prec = prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches)
-    evaluation.output_result(func_list, prec, parser.results_path, record_count, threshold, removed_plain_record_frac)
+    evaluation.output_result(func_list, prec, parser.results_path, record_count, threshold, removed_plain_record_frac,
+                             parser.histo_features)
     for i in range(0, len(embedding_funcs)):
         for j in range(i+1, len(embedding_funcs)):
             print_precision_combined_embeddings([i,j], embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path,
-                                                record_count, removed_plain_record_frac, threshold, true_matches)
+                                                record_count, removed_plain_record_frac, threshold, parser.histo_features, true_matches)
     print_precision_combined_embeddings([0, 2],embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path, record_count,
-                                        removed_plain_record_frac, threshold, true_matches)
+                                        removed_plain_record_frac, threshold, parser.histo_features, true_matches)
     print_precision_combined_embeddings([0, 0, 2], embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path,
-                                        record_count, removed_plain_record_frac, threshold, true_matches)
+                                        record_count, removed_plain_record_frac, threshold, parser.histo_features, true_matches)
     print_precision_combined_embeddings([0, 1, 0], embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path,
-                                        record_count, removed_plain_record_frac, threshold, true_matches)
+                                        record_count, removed_plain_record_frac, threshold, parser.histo_features, true_matches)
 
 
 def print_precision_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb, results_path, record_count,
-                                        removed_plain_record_frac, threshold, true_matches):
+                                        removed_plain_record_frac, threshold, histo_features, true_matches):
     func_list, prec = prec_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb,
                                                true_matches)
-    evaluation.output_result(func_list, prec, results_path, record_count, threshold, removed_plain_record_frac)
+    evaluation.output_result(func_list, prec, results_path, record_count, threshold, removed_plain_record_frac, histo_features)
 
 
 def prec_vis_embeddings(embeddings_comb, node_ids_comb, embedding_func_name, true_matches):
@@ -136,6 +141,7 @@ def argparser():
     parser.add_argument("threshold", help='similarity threshold to be included in graph')
     parser.add_argument("--remove_frac_plain", help='fraction of plain records to be excluded')
     parser.add_argument("--record_count", help='restrict record count to be processed')
+    parser.add_argument("--histo_features", help='adds histograms as features', action='store_true')
     args = parser.parse_args()
     return args
 
