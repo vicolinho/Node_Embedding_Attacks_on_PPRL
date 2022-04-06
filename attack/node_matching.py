@@ -1,10 +1,13 @@
 import networkx as nx
 import numpy as np
+from ordered_set import OrderedSet
 from pandas import DataFrame
 from sklearn.metrics.pairwise import cosine_similarity
 from queue import PriorityQueue
 
 from stellargraph.globalvar import SOURCE, TARGET, WEIGHT
+
+from attack import blocking
 
 U = 'u'
 V = 'v'
@@ -12,7 +15,10 @@ V = 'v'
 def bipartite_graph_to_matches(G, nodes1, nodes2, no_top_pairs):
     highest_pairs = PriorityQueue()
     u = [n for n in G.nodes if n[0] == U]
-    matches = nx.bipartite.minimum_weight_full_matching(G, u)
+    try:
+        matches = nx.bipartite.minimum_weight_full_matching(G, u)
+    except ValueError:
+        return []
     for node1, node2 in matches.items():
         if node1[0] == U:
             sim = G.get_edge_data(node1, node2)[WEIGHT]
@@ -24,6 +30,64 @@ def bipartite_graph_to_matches(G, nodes1, nodes2, no_top_pairs):
     highest_pairs.get()
     matches = matches_from_priority_queue(highest_pairs)
     return matches
+
+def embeddings_to_binary_lsh(embeddings1, embeddings2, dim):
+    binary_lsh1 = np.zeros((len(embeddings1), dim)).astype(int)
+    binary_lsh2 = np.zeros((len(embeddings2), dim)).astype(int)
+    C = np.random.randn(len(embeddings1[0]), dim)
+    for i in range(0, len(embeddings1)):
+        binary_lsh1[i] = embeddings1[i].dot(C) >= 0
+    for i in range(0, len(embeddings2)):
+        binary_lsh2[i] = embeddings2[i].dot(C) >= 0
+    return binary_lsh1, binary_lsh2
+
+def create_dicts_lsh_embeddings(binary_lsh1, binary_lsh2, ids_list_hamming_lsh):
+    lsh_dicts_embeddings = []
+    for ids_hamming_lsh in ids_list_hamming_lsh:
+        lsh_dict = {}
+        for i in range(0, len(binary_lsh1)):
+            add_id_to_lsh_dict(i, 0, ids_hamming_lsh, lsh_dict, binary_lsh1)
+        for i in range(0, len(binary_lsh2)):
+            add_id_to_lsh_dict(i, 1, ids_hamming_lsh, lsh_dict, binary_lsh2)
+        lsh_dicts_embeddings.append(lsh_dict)
+    return lsh_dicts_embeddings
+
+
+def add_id_to_lsh_dict(i, j, ids_hamming_lsh, lsh_dict, lsh_emb):
+    bitvector = blocking.lsh_blocking_key(lsh_emb[i], ids_hamming_lsh)
+    #bitvector = [lsh_emb[i][j] for j in ids_hamming_lsh].tobytes()
+    if not bitvector in lsh_dict:
+        lsh_dict[bitvector] = [OrderedSet(), OrderedSet()]
+    lsh_dict[bitvector][j].add(i)
+
+def embeddings_to_bipartite_graph_lsh(embeddings1, embeddings2, threshold, hyperplane_count, lsh_count, lsh_size):
+    binary_lsh1, binary_lsh2 = embeddings_to_binary_lsh(embeddings1, embeddings2, hyperplane_count)
+    ids_list_hamming_lsh = blocking.choose_positions(lsh_count, lsh_size, hyperplane_count)
+    lsh_dicts_embeddings = create_dicts_lsh_embeddings(binary_lsh1, binary_lsh2, ids_list_hamming_lsh)
+    return embeddings_to_bipartite_graph_lsh_dicts(embeddings1, embeddings2, lsh_dicts_embeddings, threshold)
+
+
+
+def embeddings_to_bipartite_graph_lsh_dicts(embeddings1, embeddings2, lsh_dicts_embeddings, threshold):
+    # lsh_dicts_embeddings: list of dicts (key for comparison)
+    # [{bitvector: [[u_ids,],[v_ids,]]}, ...]
+    source, target, weight = [], [], []
+    for lsh_dict_embeddings in lsh_dicts_embeddings:
+        for value in lsh_dict_embeddings.values():
+            temp_embeddings1 = [embeddings1[i] for i in value[0]]
+            temp_embeddings2 = [embeddings2[i] for i in value[1]]
+            if len(temp_embeddings1) == 0 or len(temp_embeddings2) == 0:
+                continue
+            cos_sims = cosine_similarity(temp_embeddings1, temp_embeddings2)
+            for x in range(0, len(temp_embeddings1)):
+                for y in range(0, len(temp_embeddings2)):
+                    sim = cos_sims[x, y]
+                    if sim >= threshold:
+                        source.append(U + str(value[0][x]))
+                        target.append(V + str(value[1][y]))
+                        weight.append(-sim)  # needed to use minimum weight matching
+    edges = DataFrame({SOURCE: source, TARGET: target, WEIGHT: weight})
+    return nx.from_pandas_edgelist(edges, edge_attr=True)
 
 
 def embeddings_to_bipartite_graph(embeddings1, embeddings2, threshold):
@@ -43,25 +107,32 @@ def embeddings_to_bipartite_graph(embeddings1, embeddings2, threshold):
 
 def matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, prefix_char=False,
                                        threshold=0.3):
-    matches = bipartite_graph_to_matches(embeddings_to_bipartite_graph(embeddings1, embeddings2, threshold), nodes1, nodes2, no_top_pairs)
+    matches = bipartite_graph_to_matches(embeddings_to_bipartite_graph(embeddings1, embeddings2, threshold), nodes1, nodes2, no_top_pairs) # 719
+    #matches = bipartite_graph_to_matches(embeddings_to_bipartite_graph_lsh(embeddings1, embeddings2, threshold, 20, 10, 8), nodes1, nodes2, no_top_pairs) 737
     if prefix_char:
         return remove_prefix_from_matches(matches)
     else:
         return matches
 
 def matches_from_embeddings_combined_graph(embeddings, nodes, id1, id2, no_top_pairs, threshold = 0.3):
+    embeddings1, embeddings2, nodes1, nodes2 = split_embeddings_by_nodes(embeddings, nodes, id1, id2)
+    return matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, True, threshold)
+
+
+def split_embeddings_by_nodes(embeddings, nodes, prefix1, prefix2):
     embeddings1 = []
     embeddings2 = []
     nodes1 = []
     nodes2 = []
     for i in range(0, len(nodes)):
-        if nodes[i][0] == id1:
+        if nodes[i][0] == prefix1:
             nodes1.append(nodes[i])
             embeddings1.append(embeddings[i])
-        elif nodes[i][0] == id2:
+        elif nodes[i][0] == prefix2:
             nodes2.append(nodes[i])
             embeddings2.append(embeddings[i])
-    return matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, True, threshold)
+    return embeddings1, embeddings2, nodes1, nodes2
+
 
 def remove_prefix_from_matches(matches):
     adapted_matches = []

@@ -34,8 +34,8 @@ def main():
     nodes_plain, edges_plain = create_sim_graph_plain(plain_data, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.no_blocking, threshold, id = 'u')
     nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = threshold, id = 'v')
     max_degree = max(len(nodes_plain), len(nodes_encoded)) - 1
-    graph_plain = sim_graph.create_graph(nodes_plain, edges_plain, min_nodes=3, max_degree=max_degree)
-    graph_encoded = sim_graph.create_graph(nodes_encoded, edges_encoded, min_nodes=3, max_degree=max_degree)
+    graph_plain = sim_graph.create_graph(nodes_plain, edges_plain, min_nodes=3, max_degree=max_degree, histo_features=parser.histo_features)
+    graph_encoded = sim_graph.create_graph(nodes_encoded, edges_encoded, min_nodes=3, max_degree=max_degree, histo_features=parser.histo_features)
     combined_graph_nx = nx.compose(graph_plain, graph_encoded)
     combined_graph = StellarGraph.from_networkx(combined_graph_nx, node_features="feature")
     embedding_funcs = [embeddings.just_features_embeddings,

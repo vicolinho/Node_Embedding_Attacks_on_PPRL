@@ -26,7 +26,7 @@ def adjusted_number_of_qgrams(bitarray, bf_length, num_hash_f):
     number_of_bits = bitarray.count(1)
     return compute_number_of_qgrams(bf_length, num_hash_f, number_of_bits)
 
-def add_node_features_vidange_networkx(G, qgram_count_df, max_degree):
+def add_node_features_vidange_networkx(G, qgram_count_df, max_degree, histo_features):
     # List of features from Vidange et al. A Graph Matching Attack on PPRL
     # Histogram on log-scale (Heimann et al. REGAL: Representation Learning-Based Graph Alignment)
     G = nx.Graph(G) # if MultiGraph()
@@ -55,9 +55,11 @@ def add_node_features_vidange_networkx(G, qgram_count_df, max_degree):
         two_hop_degrees = Counter([d for n, d in G.degree(two_hop_egonet.nodes())])
         betw_centr = betw_centr_dict[node_id]
         degr_centr = degr_centr_dict[node_id]
-        #one_hop_histo = counter_to_log_scale_histogram(one_hop_degrees, max_degree)
-        #two_hop_histo = counter_to_log_scale_histogram(two_hop_degrees, max_degree)
-        one_hop_histo, two_hop_histo = [0], [0]
+        if histo_features:
+            one_hop_histo = counter_to_log_scale_histogram(one_hop_degrees, max_degree)
+            two_hop_histo = counter_to_log_scale_histogram(two_hop_degrees, max_degree)
+        else:
+            one_hop_histo, two_hop_histo = [0], [0]
         n['feature'] = [node_len, node_degr, edge_max, edge_min, edge_avg, edge_std, egonet_degr, egonet_dens, betw_centr, degr_centr, *one_hop_histo, *two_hop_histo]
 
     return G
