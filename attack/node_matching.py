@@ -7,7 +7,7 @@ from queue import PriorityQueue
 
 from stellargraph.globalvar import SOURCE, TARGET, WEIGHT
 
-from attack import blocking
+import blocking
 
 U = 'u'
 V = 'v'
