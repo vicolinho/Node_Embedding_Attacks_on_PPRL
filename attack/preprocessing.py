@@ -4,6 +4,8 @@ import numpy as np
 from bitarray import bitarray
 from nltk import ngrams
 
+import blocking
+
 BITARRAY = 'bitarray'
 
 
@@ -39,6 +41,7 @@ def preprocess_plain_df(df, lst_qgram_attr, lst_blocking_attr):
     duplicates_subset = lst_qgram_attr + lst_blocking_attr
     df = df.drop_duplicates(subset=duplicates_subset)
     df = add_qgrams_as_key(df, lst_qgram_attr)
+    df = add_bf_as_key(df)
     return df
 
 
@@ -50,6 +53,9 @@ def add_qgrams_as_key(df, qgram_attributes):
     df = df.drop_duplicates(subset=QGRAMS)
     return df
 
+def add_bf_as_key(df):
+    df[BITARRAY] = blocking.qgrams_to_bfs(list(df[QGRAMS]), 1024, 14)
+    return df
 
 def get_bigrams(*args):
     s = set()

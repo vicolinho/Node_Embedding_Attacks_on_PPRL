@@ -1,5 +1,6 @@
 import random
 
+import mmh3 as mmh3
 from bitarray import bitarray
 from pandas import DataFrame
 
@@ -106,3 +107,17 @@ def add_blocking_keys_to_dfs(df_all, blk_attr, blk_func):
     for attribute in blk_attr:
         cols[attribute] = df_all[attribute]
     return cols.apply(func=blk_func, axis=1)
+
+
+def qgrams_to_bfs(qgrams_lists, bf_length, count_hash_func):
+    bitarray_list = []
+    seeds = list(range(0, count_hash_func))
+    for qgrams_list in qgrams_lists:
+        ba = bitarray(bf_length)
+        ba.setall(0)
+        for qgram in qgrams_list:
+            qgram_string = ''.join(qgram)
+            for seed in seeds:
+                ba[mmh3.hash(qgram_string, seed) % bf_length] = 1
+        bitarray_list.append(ba)
+    return bitarray_list
