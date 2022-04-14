@@ -88,13 +88,16 @@ def add_lsh_blocking_columns(df, lst_permutations):
         df[LSH_BLOCKING+str(i)] = list(map(lsh_blocking_key, col, len(col) * [lst_permutations[i]]))
     return df
 
-def get_dict_dataframes_by_blocking_keys_encoded(df, bf_size, lsh_count, lsh_size):
+def get_dict_dataframes_by_blocking_keys_encoded(df, key_attr, sim_attr ,bf_size, lsh_count, lsh_size):
     lst_dicts = []
     lst_permutations = choose_positions(lsh_count, lsh_size, bf_size)
     df = add_lsh_blocking_columns(df, lst_permutations)
     for i in range(0, lsh_count):
         blk_key_attr = LSH_BLOCKING + str(i)
-        df_temp = df.loc[:,[blk_key_attr, 'base64_bf', BITARRAY]] #todo: sehr unsauber bisher
+        if key_attr == sim_attr:
+            df_temp = df.loc[:, [blk_key_attr, key_attr]]
+        else:
+            df_temp = df.loc[:,[blk_key_attr, key_attr, sim_attr]]
         lst_dicts.append(get_blocking_dict(df_temp,blk_key_attr))
     return lst_dicts
 

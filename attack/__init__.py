@@ -29,10 +29,10 @@ def main():
     threshold = float(parser.threshold)
     plain_data = import_data.import_data_plain(parser.plain_file, record_count, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, ENCODED_ATTR)
     encoded_data = import_data.import_data_encoded(parser.encoded_file, record_count, ENCODED_ATTR)
-    #true_matches = import_data.get_true_matches(plain_data[QGRAMS], encoded_data[ENCODED_ATTR]) # normal mode
-    true_matches = import_data.get_true_matches(plain_data[ENCODED_ATTR], encoded_data[ENCODED_ATTR]) # normal mode
+    true_matches = import_data.get_true_matches(plain_data[QGRAMS], encoded_data[ENCODED_ATTR]) # normal mode
+    #true_matches = import_data.get_true_matches(plain_data[ENCODED_ATTR], encoded_data[ENCODED_ATTR]) # normal mode
     plain_data = plain_data.sample(frac = 1 - removed_plain_record_frac)
-    nodes_plain, edges_plain = create_sim_graph_plain(plain_data, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.no_blocking, threshold, id = 'u') # normal
+    nodes_plain, edges_plain = create_sim_graph_plain(plain_data, ENCODED_ATTR, threshold, bf_length=BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, id = 'u') # normal
     #nodes_plain, edges_plain = create_sim_graph_encoded(plain_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = threshold, id = 'u')
     nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = threshold, id = 'v')
     max_degree = max(len(nodes_plain), len(nodes_encoded)) - 1
@@ -120,7 +120,7 @@ def play_around_with_lsh_parameters(encoded_file):
         print(i, false_negative_rate(encoded_data, 70, 300, i))
 
 def create_sim_graph_encoded(encoded_data, encoded_attr, bf_length, lsh_count, lsh_size, num_of_hash_func, threshold, id):
-    blk_dicts_encoded = blocking.get_dict_dataframes_by_blocking_keys_encoded(encoded_data, bf_length, lsh_count, lsh_size)
+    blk_dicts_encoded = blocking.get_dict_dataframes_by_blocking_keys_encoded(encoded_data, encoded_attr, BITARRAY, bf_length, lsh_count, lsh_size)
     nodes = node_features.esti_qgram_count_encoded(encoded_data[BITARRAY], encoded_data[encoded_attr], bf_length, num_of_hash_func, id)
     edges = DataFrame()
     for blk_dict_encoded in blk_dicts_encoded:
@@ -129,10 +129,19 @@ def create_sim_graph_encoded(encoded_data, encoded_attr, bf_length, lsh_count, l
         edges = pd.concat([edges, df_temp])
     return nodes, edges
 
-def create_sim_graph_plain(plain_data, qgram_attributes, blk_attributes, blk_func, threshold, id):
+def create_sim_graph_plain_old(plain_data, qgram_attributes, blk_attributes, blk_func, threshold, id):
     nodes = node_features.qgram_count_plain(plain_data[QGRAMS], id)
     blk_dicts_plain = blocking.get_dict_dataframes_by_blocking_keys_plain(plain_data, blk_attributes, blk_func)
     edges = edges_df_from_blk_plain(blk_dicts_plain, qgram_attributes, threshold, id)
+    return nodes, edges
+
+def create_sim_graph_plain(plain_data, encoded_attr, threshold, id, bf_length, lsh_count, lsh_size, num_of_hash_func):
+    nodes = node_features.qgram_count_plain(plain_data[QGRAMS], id)
+    blk_dicts_encoded = blocking.get_dict_dataframes_by_blocking_keys_encoded(plain_data, QGRAMS, QGRAMS, bf_length, lsh_count, lsh_size)
+    edges = DataFrame()
+    for blk_dict_encoded in blk_dicts_encoded:
+        df_temp = edges_df_from_blk_plain(blk_dict_encoded, [], threshold, id) # qgram_attr isn't needed, not very clean code!
+        edges = pd.concat([edges, df_temp])
     return nodes, edges
 
 def argparser():
