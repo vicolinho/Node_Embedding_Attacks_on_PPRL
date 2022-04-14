@@ -105,18 +105,16 @@ def embeddings_to_bipartite_graph(embeddings1, embeddings2, threshold):
     edges = DataFrame({SOURCE: source, TARGET: target, WEIGHT: weight})
     return nx.from_pandas_edgelist(edges, edge_attr=True)
 
-def matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, prefix_char=False,
-                                       threshold=0.3):
-    matches = bipartite_graph_to_matches(embeddings_to_bipartite_graph(embeddings1, embeddings2, threshold), nodes1, nodes2, no_top_pairs) # 719
-    #matches = bipartite_graph_to_matches(embeddings_to_bipartite_graph_lsh(embeddings1, embeddings2, threshold, 20, 10, 8), nodes1, nodes2, no_top_pairs) 737
+def matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, prefix_char=False, threshold=0.3, hyperplane_count=0, lsh_count=0, lsh_size=0):
+    matches = bipartite_graph_to_matches(embeddings_to_bipartite_graph_lsh(embeddings1, embeddings2, threshold, hyperplane_count, lsh_count, lsh_size), nodes1, nodes2, no_top_pairs)
     if prefix_char:
         return remove_prefix_from_matches(matches)
     else:
         return matches
 
-def matches_from_embeddings_combined_graph(embeddings, nodes, id1, id2, no_top_pairs, threshold = 0.3):
+def matches_from_embeddings_combined_graph(embeddings, nodes, id1, id2, no_top_pairs, threshold, hyperplane_count, lsh_count, lsh_size):
     embeddings1, embeddings2, nodes1, nodes2 = split_embeddings_by_nodes(embeddings, nodes, id1, id2)
-    return matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, True, threshold)
+    return matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, True, threshold, hyperplane_count, lsh_count, lsh_size)
 
 
 def split_embeddings_by_nodes(embeddings, nodes, prefix1, prefix2):

@@ -27,11 +27,13 @@ def main():
     removed_plain_record_frac = float(parser.remove_frac_plain)
     record_count = int(parser.record_count)
     threshold = float(parser.threshold)
-    plain_data = import_data.import_data_plain(parser.plain_file, record_count, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES)
+    plain_data = import_data.import_data_plain(parser.plain_file, record_count, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, ENCODED_ATTR)
     encoded_data = import_data.import_data_encoded(parser.encoded_file, record_count, ENCODED_ATTR)
-    true_matches = import_data.get_true_matches(plain_data[QGRAMS], encoded_data[ENCODED_ATTR])
+    #true_matches = import_data.get_true_matches(plain_data[QGRAMS], encoded_data[ENCODED_ATTR]) # normal mode
+    true_matches = import_data.get_true_matches(plain_data[ENCODED_ATTR], encoded_data[ENCODED_ATTR]) # normal mode
     plain_data = plain_data.sample(frac = 1 - removed_plain_record_frac)
-    nodes_plain, edges_plain = create_sim_graph_plain(plain_data, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.no_blocking, threshold, id = 'u')
+    nodes_plain, edges_plain = create_sim_graph_plain(plain_data, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, blocking.no_blocking, threshold, id = 'u') # normal
+    #nodes_plain, edges_plain = create_sim_graph_encoded(plain_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = threshold, id = 'u')
     nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = threshold, id = 'v')
     max_degree = max(len(nodes_plain), len(nodes_encoded)) - 1
     graph_plain = sim_graph.create_graph(nodes_plain, edges_plain, min_nodes=3, max_degree=max_degree, histo_features=parser.histo_features)
@@ -70,29 +72,29 @@ def main():
 
 
 def print_precision_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb, results_path, record_count,
-                                        removed_plain_record_frac, threshold, histo_features, true_matches):
+                                        removed_plain_record_frac, threshold, histo_features, true_matches, hyperplane_count = 1024, lsh_count = 1, lsh_size = 0):
     func_list, prec = prec_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb,
-                                               true_matches)
+                                               true_matches, hyperplane_count, lsh_count, lsh_size)
     evaluation.output_result(func_list, prec, results_path, record_count, threshold, removed_plain_record_frac, histo_features)
 
 
-def prec_vis_embeddings(embeddings_comb, node_ids_comb, embedding_func_name, true_matches):
-    visualization.vis(embeddings_comb, node_ids_comb, true_matches)
+def prec_vis_embeddings(embeddings_comb, node_ids_comb, embedding_func_name, true_matches, hyperplane_count = 1024, lsh_count = 1, lsh_size = 0):
+    #visualization.vis(embeddings_comb, node_ids_comb, true_matches)
     matches = node_matching.matches_from_embeddings_combined_graph(embeddings_comb, node_ids_comb, 'u', 'v', 50,
-                                                                   0.3)
+                                                                   0.3, hyperplane_count, lsh_count, lsh_size)
     precision = evaluation.evalaute_top_pairs(matches, true_matches)
     print(embedding_func_name, precision)
     return embedding_func_name, precision
 
 
-def prec_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb, true_matches):
+def prec_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb, true_matches, hyperplane_count = 1024, lsh_count = 1, lsh_size = 0):
     embeddings_comb_list = [embeddings_comb[i] for i in list_ids]
     ids_comb_list = [node_ids_comb[i] for i in list_ids]
     embeddings_func_list = ' '.join([embedding_func_names[i] for i in list_ids])
 
     emb, node_ids = embeddings.combine_embeddings(embeddings_comb_list, ids_comb_list)
     visualization.vis(emb, node_ids, true_matches)
-    matches = node_matching.matches_from_embeddings_combined_graph(emb, node_ids, 'u', 'v', 50, 0.3)
+    matches = node_matching.matches_from_embeddings_combined_graph(emb, node_ids, 'u', 'v', 50, 0.3, hyperplane_count, lsh_count, lsh_size)
     precision = evaluation.evalaute_top_pairs(matches, true_matches)
     print(embeddings_func_list, precision)
     return embeddings_func_list, precision

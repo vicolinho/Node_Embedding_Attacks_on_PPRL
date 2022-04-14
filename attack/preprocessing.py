@@ -24,6 +24,11 @@ def decode(base_string, length=1024):
             bf_array[int(i)] = 1
     return bf_array
 
+def encode(bf):
+    return base64.b64encode(bf.tobytes())
+
+
+
 
 def access_bit(data, num):
     base = int(num // 8)
@@ -37,11 +42,11 @@ def preprocess_encoded_df(df, encoded_attr):
     return df
 
 
-def preprocess_plain_df(df, lst_qgram_attr, lst_blocking_attr):
+def preprocess_plain_df(df, lst_qgram_attr, lst_blocking_attr, encoded_attr):
     duplicates_subset = lst_qgram_attr + lst_blocking_attr
     df = df.drop_duplicates(subset=duplicates_subset)
     df = add_qgrams_as_key(df, lst_qgram_attr)
-    df = add_bf_as_key(df)
+    df = add_bf_as_key(df, encoded_attr)
     return df
 
 
@@ -53,8 +58,9 @@ def add_qgrams_as_key(df, qgram_attributes):
     df = df.drop_duplicates(subset=QGRAMS)
     return df
 
-def add_bf_as_key(df):
-    df[BITARRAY] = blocking.qgrams_to_bfs(list(df[QGRAMS]), 1024, 14)
+def add_bf_as_key(df, encoded_attr):
+    df[BITARRAY] = blocking.qgrams_to_bfs(list(df[QGRAMS]), 1024, 15)
+    df[encoded_attr] = list(map(encode, df[BITARRAY]))
     return df
 
 def get_bigrams(*args):
