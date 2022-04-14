@@ -27,14 +27,16 @@ def main():
     removed_plain_record_frac = float(parser.remove_frac_plain)
     record_count = int(parser.record_count)
     threshold = float(parser.threshold)
+    lsh_count = int(parser.lsh_count)
+    lsh_size = int(parser.lsh_size)
     plain_data = import_data.import_data_plain(parser.plain_file, record_count, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, ENCODED_ATTR)
     encoded_data = import_data.import_data_encoded(parser.encoded_file, record_count, ENCODED_ATTR)
     true_matches = import_data.get_true_matches(plain_data[QGRAMS], encoded_data[ENCODED_ATTR]) # normal mode
     #true_matches = import_data.get_true_matches(plain_data[ENCODED_ATTR], encoded_data[ENCODED_ATTR]) # normal mode
     plain_data = plain_data.sample(frac = 1 - removed_plain_record_frac)
-    nodes_plain, edges_plain = create_sim_graph_plain(plain_data, ENCODED_ATTR, threshold, bf_length=BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, id = 'u') # normal
+    nodes_plain, edges_plain = create_sim_graph_plain(plain_data, ENCODED_ATTR, threshold, BF_LENGTH, lsh_count, lsh_size, num_of_hash_func=15, id = 'u') # normal
     #nodes_plain, edges_plain = create_sim_graph_encoded(plain_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = threshold, id = 'u')
-    nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = threshold, id = 'v')
+    nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, lsh_count, lsh_size, num_of_hash_func=15, threshold = threshold, id = 'v')
     max_degree = max(len(nodes_plain), len(nodes_encoded)) - 1
     graph_plain = sim_graph.create_graph(nodes_plain, edges_plain, min_nodes=3, max_degree=max_degree, histo_features=parser.histo_features)
     graph_encoded = sim_graph.create_graph(nodes_encoded, edges_encoded, min_nodes=3, max_degree=max_degree, histo_features=parser.histo_features)
@@ -49,36 +51,36 @@ def main():
     embeddings_comb, node_ids_comb = [None] * len(embedding_func_names), [None] * len(embedding_func_names)
     for i in range(0, len(embedding_funcs)):
         embeddings_comb[i], node_ids_comb[i] = embedding_funcs[i](combined_graph)
-        func_list, prec = prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches)
+        func_list, prec = prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches, 1024, lsh_count, lsh_size)
         evaluation.output_result(func_list, prec, parser.results_path, record_count, threshold,
                                  removed_plain_record_frac, parser.histo_features)
 
     i = len(embedding_funcs)
     learning_G = embeddings.create_learning_G_from_true_matches_graphsage(combined_graph_nx, true_matches)
     embeddings_comb[i], node_ids_comb[i] = embeddings.generate_node_embeddings_graphsage(combined_graph, learning_G)
-    func_list, prec = prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches)
+    func_list, prec = prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches, 1024, lsh_count, lsh_size)
     evaluation.output_result(func_list, prec, parser.results_path, record_count, threshold, removed_plain_record_frac,
                              parser.histo_features)
     for i in range(0, len(embedding_funcs)):
         for j in range(i+1, len(embedding_funcs)):
             print_precision_combined_embeddings([i,j], embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path,
-                                                record_count, removed_plain_record_frac, threshold, parser.histo_features, true_matches)
+                                                record_count, removed_plain_record_frac, threshold, parser.histo_features, true_matches, 1024, lsh_count, lsh_size)
     print_precision_combined_embeddings([0, 2],embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path, record_count,
-                                        removed_plain_record_frac, threshold, parser.histo_features, true_matches)
+                                        removed_plain_record_frac, threshold, parser.histo_features, true_matches, 1024, lsh_count, lsh_size)
     print_precision_combined_embeddings([0, 0, 2], embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path,
-                                        record_count, removed_plain_record_frac, threshold, parser.histo_features, true_matches)
+                                        record_count, removed_plain_record_frac, threshold, parser.histo_features, true_matches, 1024, lsh_count, lsh_size)
     print_precision_combined_embeddings([0, 1, 0], embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path,
-                                        record_count, removed_plain_record_frac, threshold, parser.histo_features, true_matches)
+                                        record_count, removed_plain_record_frac, threshold, parser.histo_features, true_matches, 1024, lsh_count, lsh_size)
 
 
 def print_precision_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb, results_path, record_count,
-                                        removed_plain_record_frac, threshold, histo_features, true_matches, hyperplane_count = 1024, lsh_count = 1, lsh_size = 0):
+                                        removed_plain_record_frac, threshold, histo_features, true_matches, hyperplane_count, lsh_count, lsh_size):
     func_list, prec = prec_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb,
                                                true_matches, hyperplane_count, lsh_count, lsh_size)
     evaluation.output_result(func_list, prec, results_path, record_count, threshold, removed_plain_record_frac, histo_features)
 
 
-def prec_vis_embeddings(embeddings_comb, node_ids_comb, embedding_func_name, true_matches, hyperplane_count = 1024, lsh_count = 1, lsh_size = 0):
+def prec_vis_embeddings(embeddings_comb, node_ids_comb, embedding_func_name, true_matches, hyperplane_count, lsh_count, lsh_size):
     #visualization.vis(embeddings_comb, node_ids_comb, true_matches)
     matches = node_matching.matches_from_embeddings_combined_graph(embeddings_comb, node_ids_comb, 'u', 'v', 50,
                                                                    0.3, hyperplane_count, lsh_count, lsh_size)
@@ -135,7 +137,7 @@ def create_sim_graph_plain_old(plain_data, qgram_attributes, blk_attributes, blk
     edges = edges_df_from_blk_plain(blk_dicts_plain, qgram_attributes, threshold, id)
     return nodes, edges
 
-def create_sim_graph_plain(plain_data, encoded_attr, threshold, id, bf_length, lsh_count, lsh_size, num_of_hash_func):
+def create_sim_graph_plain(plain_data, encoded_attr, threshold, bf_length, lsh_count, lsh_size, num_of_hash_func, id):
     nodes = node_features.qgram_count_plain(plain_data[QGRAMS], id)
     blk_dicts_encoded = blocking.get_dict_dataframes_by_blocking_keys_encoded(plain_data, QGRAMS, QGRAMS, bf_length, lsh_count, lsh_size)
     edges = DataFrame()
@@ -153,6 +155,8 @@ def argparser():
     parser.add_argument("--remove_frac_plain", help='fraction of plain records to be excluded')
     parser.add_argument("--record_count", help='restrict record count to be processed')
     parser.add_argument("--histo_features", help='adds histograms as features', action='store_true')
+    parser.add_argument("--lsh_size", help='vector size for hamming lsh for indexing', default=0)
+    parser.add_argument("--lsh_count", help='count of different lsh vectors for indexing', default=1)
     args = parser.parse_args()
     return args
 
