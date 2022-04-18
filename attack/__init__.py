@@ -53,14 +53,13 @@ def main():
         embeddings_comb[i], node_ids_comb[i] = embedding_funcs[i](combined_graph)
         func_list, prec = prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches, 1024, lsh_count, lsh_size)
         evaluation.output_result(func_list, prec, parser.results_path, record_count, threshold,
-                                 removed_plain_record_frac, parser.histo_features)
-
+                                 removed_plain_record_frac, parser.histo_features, lsh_count, lsh_size)
     i = len(embedding_funcs)
     learning_G = embeddings.create_learning_G_from_true_matches_graphsage(combined_graph_nx, true_matches)
     embeddings_comb[i], node_ids_comb[i] = embeddings.generate_node_embeddings_graphsage(combined_graph, learning_G)
     func_list, prec = prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches, 1024, lsh_count, lsh_size)
     evaluation.output_result(func_list, prec, parser.results_path, record_count, threshold, removed_plain_record_frac,
-                             parser.histo_features)
+                             parser.histo_features, lsh_count, lsh_size)
     for i in range(0, len(embedding_funcs)):
         for j in range(i+1, len(embedding_funcs)):
             print_precision_combined_embeddings([i,j], embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path,
@@ -77,7 +76,7 @@ def print_precision_combined_embeddings(list_ids, embedding_func_names, embeddin
                                         removed_plain_record_frac, threshold, histo_features, true_matches, hyperplane_count, lsh_count, lsh_size):
     func_list, prec = prec_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb,
                                                true_matches, hyperplane_count, lsh_count, lsh_size)
-    evaluation.output_result(func_list, prec, results_path, record_count, threshold, removed_plain_record_frac, histo_features)
+    evaluation.output_result(func_list, prec, results_path, record_count, threshold, removed_plain_record_frac, histo_features, lsh_count, lsh_size)
 
 
 def prec_vis_embeddings(embeddings_comb, node_ids_comb, embedding_func_name, true_matches, hyperplane_count, lsh_count, lsh_size):
