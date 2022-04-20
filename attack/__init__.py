@@ -43,9 +43,10 @@ def main():
     combined_graph_nx = nx.compose(graph_plain, graph_encoded)
     combined_graph = StellarGraph.from_networkx(combined_graph_nx, node_features="feature")
     embedding_funcs = [embeddings.just_features_embeddings,
-                       embeddings.generate_node_embeddings_graphsage]
+                       embeddings.generate_node_embeddings_graphsage,
+                       embeddings.generate_node_embeddings_deepgraphinfomax]
                        #embeddings.generate_node_embeddings_graphwave]
-    embedding_func_names = ['features', 'graphsage',
+    embedding_func_names = ['features', 'graphsage', 'deepgraphinfomax',
       #  'graphwave',
         'graphsage_alt']
     embeddings_comb, node_ids_comb = [None] * len(embedding_func_names), [None] * len(embedding_func_names)
@@ -64,7 +65,7 @@ def main():
         for j in range(i+1, len(embedding_funcs)):
             print_precision_combined_embeddings([i,j], embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path,
                                                 record_count, removed_plain_record_frac, threshold, parser.histo_features, true_matches, 1024, lsh_count, lsh_size)
-    print_precision_combined_embeddings([0, 2],embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path, record_count,
+    print_precision_combined_embeddings([0, 1, 2],embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path, record_count,
                                         removed_plain_record_frac, threshold, parser.histo_features, true_matches, 1024, lsh_count, lsh_size)
     print_precision_combined_embeddings([0, 0, 2], embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path,
                                         record_count, removed_plain_record_frac, threshold, parser.histo_features, true_matches, 1024, lsh_count, lsh_size)

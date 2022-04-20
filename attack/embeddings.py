@@ -123,6 +123,34 @@ def normalize_embeddings(embeddings):
     embeddings_transformed = scaler.transform(embeddings)
     return embeddings_transformed
 
+def generate_node_embeddings_deepgraphinfomax(G):
+    fullbatch_generator = FullBatchNodeGenerator(G, sparse=False)
+    gcn_model = GCN(layer_sizes=[128], activations=["relu"], generator=fullbatch_generator)
+
+    corrupted_generator = CorruptedGenerator(fullbatch_generator)
+    gen = corrupted_generator.flow(G.nodes())
+    infomax = DeepGraphInfomax(gcn_model, corrupted_generator)
+    x_in, x_out = infomax.in_out_tensors()
+
+    model = Model(inputs=x_in, outputs=x_out)
+    model.compile(loss=tf.nn.sigmoid_cross_entropy_with_logits, optimizer=Adam(lr=1e-3))
+    epochs = 100
+    es = EarlyStopping(monitor="loss", min_delta=0, patience=20)
+    history = model.fit(gen, epochs=epochs, verbose=0, callbacks=[es])
+    plot_history(history)
+    x_emb_in, x_emb_out = gcn_model.in_out_tensors()
+
+    # for full batch models, squeeze out the batch dim (which is 1)
+    x_out = tf.squeeze(x_emb_out, axis=0)
+    emb_model = Model(inputs=x_emb_in, outputs=x_out)
+
+    node_subjects = G.nodes()
+
+
+    node_gen = fullbatch_generator.flow(node_subjects)
+    embeddings = emb_model.predict(node_gen)
+    return embeddings, node_subjects
+
 
 def generate_node_embeddings_gcn(G):
     pass
@@ -151,6 +179,10 @@ def create_learning_G_from_true_matches_graphsage(G, true_matches):
     learning_graph.add_edges_from(true_matches)
     learning_graph = learning_graph.subgraph(G.nodes())
     return StellarGraph.from_networkx(learning_graph, node_features="feature")
+
+def generate_node_embeddings_custom(G):
+    pass
+
 
 
 
