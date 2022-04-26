@@ -1,6 +1,5 @@
-import embeddings
+from attack import embeddings
 from classes.deepgraphinfomax_settings import Deepgraphinfomax_settings
-from classes.embedding_results import Embedding_results
 from classes.graphsage_settings import Graphsage_settings
 
 LAYER_STRUCTURES_LIST = [[512,256,128], [128,128,128,128], [128], [1024,1024,128]]

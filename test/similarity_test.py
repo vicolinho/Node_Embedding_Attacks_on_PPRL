@@ -4,8 +4,6 @@ from pandas import DataFrame
 
 from bitarray import bitarray
 
-import attack.similarities
-
 
 class TestSimilarity(unittest.TestCase):
     def test_dice_sim_bfs(self):
@@ -13,8 +11,8 @@ class TestSimilarity(unittest.TestCase):
         ba2 = bitarray('11001')
         ba3 = bitarray('110110011')
         ba4 = bitarray('110110001')
-        self.assertEqual(4 / 6, attack.similarities.dice_sim_bfs(ba1, ba2))
-        self.assertEqual(10 / 11, attack.similarities.dice_sim_bfs(ba3, ba4))
+        self.assertEqual(4 / 6, ma_node_embeddings_privacy_attacks_pprl.similarities.dice_sim_bfs(ba1, ba2))
+        self.assertEqual(10 / 11, ma_node_embeddings_privacy_attacks_pprl.similarities.dice_sim_bfs(ba3, ba4))
 
     def test_record_sims_bf(self):
         #tests hier kaum möglich
@@ -23,7 +21,7 @@ class TestSimilarity(unittest.TestCase):
     def test_record_sims_plain(self):
         data = {'first_name': ['annan','tim','anne','ethe'],'last_name': ['anhe','heth','li','tim']}
         df_plain = DataFrame(data=data)
-        sim_dict = attack.similarities.edges_df_from_blk_element_plain(df_plain, ['first_name', 'last_name'])
+        sim_dict = ma_node_embeddings_privacy_attacks_pprl.similarities.edges_df_from_blk_element_plain(df_plain, ['first_name', 'last_name'])
         bigrams_annan = frozenset({('n','n'),('a','n'),('n','a'),('n','h'),('h','e')})
         bigrams_tim = frozenset({('t','h'),('e','t'), ('h','e'), ('i','m'), ('t','i')})
         bigrams_anne = frozenset({('n','e'),('n','n'),('l','i'),('a','n')})

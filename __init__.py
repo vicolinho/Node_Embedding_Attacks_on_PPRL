@@ -1,12 +1,10 @@
-import math
-
 import networkx as nx
 import numpy as np
 from pandas import DataFrame
 from stellargraph import StellarGraph
 
-import embeddings
-import blocking, preprocessing, sim_graph, node_matching, node_features, import_data, evaluation, \
+from attack import embeddings
+from attack import blocking, preprocessing, sim_graph, node_matching, node_features, import_data, evaluation, \
     visualization
 
 import pandas as pd
@@ -14,9 +12,9 @@ import argparse
 
 from attack import hyperparameter_tuning
 from classes.settings import Settings
-from preprocessing import BITARRAY, get_bigrams, QGRAMS
-from similarities import edges_df_from_blk_plain, edges_df_from_blk_bf, edges_df_from_blk_bf_adjusted
-from analysis import false_negative_rate, get_num_hash_function
+from attack.preprocessing import BITARRAY, get_bigrams, QGRAMS
+from attack.similarities import edges_df_from_blk_plain, edges_df_from_blk_bf_adjusted
+from attack.analysis import false_negative_rate, get_num_hash_function
 
 #DATA_PLAIN_FILE = "pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a.csv"
 #DATA_ENCODED_FILE = "pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a_encoded_fn_ln.csv"

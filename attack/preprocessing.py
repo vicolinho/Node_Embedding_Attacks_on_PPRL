@@ -4,7 +4,7 @@ import numpy as np
 from bitarray import bitarray
 from nltk import ngrams
 
-import blocking
+from attack import blocking
 
 BITARRAY = 'bitarray'
 

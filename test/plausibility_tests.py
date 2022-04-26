@@ -5,7 +5,7 @@ from stellargraph.datasets import datasets
 import embeddings
 from attack import import_data, ENCODED_ATTR, \
     create_sim_graph_encoded, BF_LENGTH, sim_graph, node_matching, evaluation, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, \
-    create_sim_graph_plain, blocking, node_features, embeddings, visualization
+    create_sim_graph_plain, blocking, embeddings, visualization
 
 DATA_ENCODED_FILE = '../pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a_encoded_fn_ln.csv'
 DATA_PLAIN_FILE = '../pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a.csv'
