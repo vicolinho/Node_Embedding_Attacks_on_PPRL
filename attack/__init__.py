@@ -11,6 +11,9 @@ import blocking, preprocessing, sim_graph, node_matching, node_features, import_
 
 import pandas as pd
 import argparse
+
+from attack import hyperparameter_tuning
+from classes.settings import Settings
 from preprocessing import BITARRAY, get_bigrams, QGRAMS
 from similarities import edges_df_from_blk_plain, edges_df_from_blk_bf, edges_df_from_blk_bf_adjusted
 from analysis import false_negative_rate, get_num_hash_function
@@ -24,6 +27,7 @@ BF_LENGTH = 1024
 
 def main():
     parser = argparser()
+    settings = Settings(parser)
     removed_plain_record_frac = float(parser.remove_frac_plain)
     record_count = int(parser.record_count)
     threshold = float(parser.threshold)
@@ -42,35 +46,22 @@ def main():
     graph_encoded = sim_graph.create_graph(nodes_encoded, edges_encoded, min_nodes=3, max_degree=max_degree, histo_features=parser.histo_features)
     combined_graph_nx = nx.compose(graph_plain, graph_encoded)
     combined_graph = StellarGraph.from_networkx(combined_graph_nx, node_features="feature")
-    embedding_funcs = [embeddings.just_features_embeddings,
-                       embeddings.generate_node_embeddings_graphsage,
-                       embeddings.generate_node_embeddings_deepgraphinfomax]
-                       #embeddings.generate_node_embeddings_graphwave]
-    embedding_func_names = ['features', 'graphsage', 'deepgraphinfomax',
-      #  'graphwave',
-        'graphsage_alt']
-    embeddings_comb, node_ids_comb = [None] * len(embedding_func_names), [None] * len(embedding_func_names)
-    for i in range(0, len(embedding_funcs)):
-        embeddings_comb[i], node_ids_comb[i] = embedding_funcs[i](combined_graph)
-        func_list, prec = prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches, 1024, lsh_count, lsh_size)
-        evaluation.output_result(func_list, prec, parser.results_path, record_count, threshold,
-                                 removed_plain_record_frac, parser.histo_features, lsh_count, lsh_size)
-    i = len(embedding_funcs)
-    learning_G = embeddings.create_learning_G_from_true_matches_graphsage(combined_graph_nx, true_matches)
-    embeddings_comb[i], node_ids_comb[i] = embeddings.generate_node_embeddings_graphsage(combined_graph, learning_G)
-    func_list, prec = prec_vis_embeddings(embeddings_comb[i], node_ids_comb[i], embedding_func_names[i], true_matches, 1024, lsh_count, lsh_size)
-    evaluation.output_result(func_list, prec, parser.results_path, record_count, threshold, removed_plain_record_frac,
-                             parser.histo_features, lsh_count, lsh_size)
-    for i in range(0, len(embedding_funcs)):
-        for j in range(i+1, len(embedding_funcs)):
-            print_precision_combined_embeddings([i,j], embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path,
-                                                record_count, removed_plain_record_frac, threshold, parser.histo_features, true_matches, 1024, lsh_count, lsh_size)
-    print_precision_combined_embeddings([0, 1, 2],embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path, record_count,
-                                        removed_plain_record_frac, threshold, parser.histo_features, true_matches, 1024, lsh_count, lsh_size)
-    print_precision_combined_embeddings([0, 0, 2], embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path,
-                                        record_count, removed_plain_record_frac, threshold, parser.histo_features, true_matches, 1024, lsh_count, lsh_size)
-    print_precision_combined_embeddings([0, 1, 0], embedding_func_names, embeddings_comb, node_ids_comb, parser.results_path,
-                                        record_count, removed_plain_record_frac, threshold, parser.histo_features, true_matches, 1024, lsh_count, lsh_size)
+    ### NEW IMPLEMENTATION
+    embeddings_features = embeddings.just_features_embeddings(combined_graph)
+    matches_precision_output(embeddings_features, lsh_size, lsh_count, settings, true_matches)
+    embedding_results_list_graphsage = hyperparameter_tuning.embeddings_hyperparameter_graphsage(combined_graph, hyperparameter_tuning.get_default_params_graphsage())
+    embedding_results_list_deepgraphinfomax = hyperparameter_tuning.embeddings_hyperparameter_deepgraphinfomax(combined_graph, hyperparameter_tuning.get_default_params_deepgraphinfomax())
+    for embedding_results in embedding_results_list_graphsage + embedding_results_list_deepgraphinfomax:
+        matches_precision_output(embedding_results, lsh_size, lsh_count, settings, true_matches)
+        merged_embeddings_results = embeddings_features.merge(embedding_results)
+        matches_precision_output(merged_embeddings_results, lsh_size, lsh_count, settings, true_matches)
+
+def matches_precision_output(merged_embeddings_results, lsh_size, lsh_count, settings, true_matches):
+    matches = node_matching.matches_from_embeddings_combined_graph(merged_embeddings_results, 'u', 'v', 50,
+                                                                   0.3, settings.hyperplane_count, lsh_count, lsh_size)
+    precision = evaluation.evalaute_top_pairs(matches, true_matches)
+    print(merged_embeddings_results.info_string, precision)
+    evaluation.output_result(merged_embeddings_results.info_string, precision, settings)
 
 
 def print_precision_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb, results_path, record_count,

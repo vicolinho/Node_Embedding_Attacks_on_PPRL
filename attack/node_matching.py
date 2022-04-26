@@ -112,8 +112,8 @@ def matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2,
     else:
         return matches
 
-def matches_from_embeddings_combined_graph(embeddings, nodes, id1, id2, no_top_pairs, threshold, hyperplane_count, lsh_count, lsh_size):
-    embeddings1, embeddings2, nodes1, nodes2 = split_embeddings_by_nodes(embeddings, nodes, id1, id2)
+def matches_from_embeddings_combined_graph(embedding_results, id1, id2, no_top_pairs, threshold, hyperplane_count, lsh_count, lsh_size):
+    embeddings1, embeddings2, nodes1, nodes2 = split_embeddings_by_nodes(embedding_results.embeddings, embedding_results.nodes, id1, id2)
     return matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, True, threshold, hyperplane_count, lsh_count, lsh_size)
 
 

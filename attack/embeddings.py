@@ -17,6 +17,8 @@ from tensorflow.python.keras.callbacks import EarlyStopping
 from tensorflow.python.keras.models import Model
 from tensorflow.python.keras.optimizer_v2.adam import Adam
 
+from classes.embedding_results import Embedding_results
+
 
 def generate_node_embeddings_node2vec(graph): # not useful only includes node ids not structures or similarities
     # https://stellargraph.readthedocs.io/en/stable/demos/embeddings/node2vec-embeddings.html
@@ -51,22 +53,22 @@ def add_node_features_to_embeddings(node_embeddings, node_ids, node_weights, cou
     return node_embeddings_new
 
 
-def generate_node_embeddings_graphsage(G, learning_G = None):
+def generate_node_embeddings_graphsage(G, graphsage_settings, learning_G = None):
     # https://stellargraph.readthedocs.io/en/stable/demos/embeddings/graphsage-unsupervised-sampler-embeddings.html
     if learning_G == None:
         learning_G = G
     learning_nodes = list(learning_G.nodes())
-    number_of_walks = 1
-    length = 5
+    number_of_walks = graphsage_settings.number_of_walks
+    length = graphsage_settings.length
     unsupervised_samples = UnsupervisedSampler(
         learning_G, nodes=learning_nodes, length=length, number_of_walks=number_of_walks
     )
-    batch_size = 50
-    epochs = 10
-    num_samples = [10, 5]
+    batch_size = graphsage_settings.batch_size
+    epochs = graphsage_settings.epochs
+    num_samples = graphsage_settings.num_samples
     generator = GraphSAGELinkGenerator(learning_G, batch_size, num_samples)
     train_gen = generator.flow(unsupervised_samples)
-    layer_sizes = [128, 128]
+    layer_sizes = graphsage_settings.layers
     graphsage = GraphSAGE(
         layer_sizes=layer_sizes, generator=generator, bias=True, dropout=0.0, normalize="l2"
     )
@@ -97,7 +99,7 @@ def generate_node_embeddings_graphsage(G, learning_G = None):
     node_gen = GraphSAGENodeGenerator(G, batch_size, num_samples).flow(nodes)
     node_embeddings = embedding_model.predict(node_gen, workers=4, verbose=1)
 
-    return node_embeddings, nodes
+    return Embedding_results(node_embeddings, nodes, str(graphsage_settings))
 
 
 def generate_node_embeddings_graphwave(G):
@@ -123,10 +125,10 @@ def normalize_embeddings(embeddings):
     embeddings_transformed = scaler.transform(embeddings)
     return embeddings_transformed
 
-def generate_node_embeddings_deepgraphinfomax(G):
+def generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings):
     fullbatch_generator = FullBatchNodeGenerator(G, sparse=False)
-    gcn_model = GCN(layer_sizes=[128], activations=["relu"], generator=fullbatch_generator)
-
+    #gcn_model = GCN(layer_sizes=[128], activations=["relu"], generator=fullbatch_generator)
+    gcn_model = GCN(layer_sizes=deepgraphinfomax_settings.layers, activations=deepgraphinfomax_settings.activations, generator=fullbatch_generator)
     corrupted_generator = CorruptedGenerator(fullbatch_generator)
     gen = corrupted_generator.flow(G.nodes())
     infomax = DeepGraphInfomax(gcn_model, corrupted_generator)
@@ -149,7 +151,7 @@ def generate_node_embeddings_deepgraphinfomax(G):
 
     node_gen = fullbatch_generator.flow(node_subjects)
     embeddings = emb_model.predict(node_gen)
-    return embeddings, node_subjects
+    return Embedding_results(embeddings, node_subjects, str(deepgraphinfomax_settings))
 
 
 def generate_node_embeddings_gcn(G):
@@ -158,7 +160,7 @@ def generate_node_embeddings_gcn(G):
 def just_features_embeddings(G):
     embeddings = G.node_features()
     embeddings = normalize_embeddings(embeddings)
-    return embeddings, G.nodes()
+    return Embedding_results(embeddings, G.nodes(), "features")
 
 def combine_embeddings(embeddings_list, node_ids_list):
     embeddings = []
