@@ -17,7 +17,7 @@ def save_graph_tp(graph, true_matches, settings):
         pickle.dump(tpl, output, pickle.HIGHEST_PROTOCOL)
 
 def get_filename_template(settings):
-    if settings.mode == "full":
+    if settings.mode == "graph_calc":
         histo_suffix = '_histo' if settings.histo_features else ''
         if settings.lsh_size == 0:
             filename = "c{0}_t{1}_r{2}{3}".format(settings.record_count, settings.threshold,

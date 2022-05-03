@@ -29,19 +29,26 @@ def main():
     settings = Settings(parser)
     lsh_count = int(parser.lsh_count)
     lsh_size = int(parser.lsh_size)
-    if settings.mode == "full":
+    if settings.mode == "graph_calc":
         removed_plain_record_frac = float(parser.remove_frac_plain)
         record_count = int(parser.record_count)
         threshold = float(parser.threshold)
         combined_graph, true_matches = generate_graph(lsh_count, lsh_size, parser, record_count, removed_plain_record_frac,
                                                   settings, threshold)
+        if not settings.analysis:
+            return
     else:
         combined_graph, true_matches = attack.inout.load_graph_tp(graph_path=settings.pickle_file)
-    ### NEW IMPLEMENTATION
+    calc_emb_analysis(combined_graph, lsh_count, lsh_size, settings, true_matches)
+
+
+def calc_emb_analysis(combined_graph, lsh_count, lsh_size, settings, true_matches):
     embeddings_features = embeddings.just_features_embeddings(combined_graph)
     matches_precision_output(embeddings_features, lsh_size, lsh_count, settings, true_matches)
-    embedding_results_list_graphsage = hyperparameter_tuning.embeddings_hyperparameter_graphsage(combined_graph, hyperparameter_tuning.get_default_params_graphsage())
-    embedding_results_list_deepgraphinfomax = hyperparameter_tuning.embeddings_hyperparameter_deepgraphinfomax(combined_graph, hyperparameter_tuning.get_default_params_deepgraphinfomax())
+    embedding_results_list_graphsage = hyperparameter_tuning.embeddings_hyperparameter_graphsage(combined_graph,
+                                                                                                 hyperparameter_tuning.get_default_params_graphsage())
+    embedding_results_list_deepgraphinfomax = hyperparameter_tuning.embeddings_hyperparameter_deepgraphinfomax(
+        combined_graph, hyperparameter_tuning.get_default_params_deepgraphinfomax())
     for embedding_results in embedding_results_list_graphsage + embedding_results_list_deepgraphinfomax:
         matches_precision_output(embedding_results, lsh_size, lsh_count, settings, true_matches)
         merged_embeddings_results = embeddings_features.merge(embedding_results)
@@ -156,7 +163,8 @@ def argparser():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='mode')
 
-    parser_full = subparsers.add_parser('full', help="save graph and calculate precision")
+    parser_full = subparsers.add_parser('graph_calc', help="save graph and calculate precision")
+    parser_full.add_argument("--analysis", help='needed if analysis should be conducted', action='store_true')
     parser_full.add_argument("plain_file", help='path to plain dataset')
     parser_full.add_argument("encoded_file", help='path to encoded dataset')
     parser_full.add_argument("results_path", help='path to results output file')

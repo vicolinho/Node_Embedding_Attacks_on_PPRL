@@ -1,11 +1,12 @@
 class Settings:
     def __init__(self, parser): # todo datatypes
         self.mode = parser.mode
-        if self.mode == "full":
+        if self.mode == "graph_calc":
             self.record_count = parser.record_count
             self.threshold = parser.threshold
             self.removed_plain_record_frac = parser.remove_frac_plain
             self.histo_features = parser.histo_features
+            self.analysis = parser.analysis
         else:
             self.pickle_file = parser.pickle_file
 
