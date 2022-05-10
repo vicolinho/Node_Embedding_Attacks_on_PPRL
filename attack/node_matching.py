@@ -68,7 +68,7 @@ def embeddings_to_bipartite_graph_lsh(embeddings1, embeddings2, threshold, hyper
 
 
 
-def embeddings_to_bipartite_graph_lsh_dicts(embeddings1, embeddings2, lsh_dicts_embeddings, threshold):
+def embeddings_to_bipartite_graph_lsh_dicts(embeddings1, embeddings2, lsh_dicts_embeddings, threshold, vidange = True):
     # lsh_dicts_embeddings: list of dicts (key for comparison)
     # [{bitvector: [[u_ids,],[v_ids,]]}, ...]
     source, target, weight = [], [], []
@@ -87,14 +87,16 @@ def embeddings_to_bipartite_graph_lsh_dicts(embeddings1, embeddings2, lsh_dicts_
                         target.append(V + str(value[1][y]))
                         weight.append(-sim)  # needed to use minimum weight matching
     edges = DataFrame({SOURCE: source, TARGET: target, WEIGHT: weight})
+    if vidange:
+        edges = transform_edges_df_to_vidange(edges, w_cos = 0.5, w_sim_conf = 0.3, w_degr_conf = 0.2)
     return nx.from_pandas_edgelist(edges, edge_attr=True)
 
 
-def embeddings_to_bipartite_graph(embeddings1, embeddings2, threshold):
+def embeddings_to_bipartite_graph(embeddings1, embeddings2, threshold, func=cosine_similarity): #todo: to be cleaned
     source = []
     target = []
     weight = []
-    cos_sims = cosine_similarity(embeddings1, embeddings2)
+    cos_sims = func(embeddings1, embeddings2)
     for x in range(0, len(embeddings1)):
         for y in range(0, len(embeddings2)):
             sim = cos_sims[x,y]
@@ -104,6 +106,60 @@ def embeddings_to_bipartite_graph(embeddings1, embeddings2, threshold):
                 weight.append(-sim) # needed to use minimum weight matching
     edges = DataFrame({SOURCE: source, TARGET: target, WEIGHT: weight})
     return nx.from_pandas_edgelist(edges, edge_attr=True)
+
+def cos_sim_matrix_to_edges_vidange(cos_sims, threshold, w_cos, w_sim_conf, w_degr_conf):
+    w_cos, w_sim_conf, w_degr_conf = normalize_weights_vidange(w_cos, w_degr_conf, w_sim_conf)
+    source = []
+    target = []
+    weight = []
+    for x in range(0, len(cos_sims)):
+        for y in range(0, len(cos_sims[0])):
+            sim = cos_sims[x,y]
+            if sim >= threshold:
+                source.append(U+str(x))
+                target.append(V+str(y))
+                weight.append(-sim)
+    df = DataFrame({SOURCE: source, TARGET: target, WEIGHT: weight})
+    df = transform_edges_df_to_vidange(df, w_cos, w_degr_conf, w_sim_conf)
+    return df
+
+
+def transform_edges_df_to_vidange(df, w_cos, w_degr_conf, w_sim_conf):
+    df['cos_sim'] = -1 * df[WEIGHT]
+    df['sum_x'] = df['cos_sim'].groupby(df[SOURCE]).transform('sum')
+    df['sum_y'] = df['cos_sim'].groupby(df[TARGET]).transform('sum')
+    df['count_x'] = df['cos_sim'].groupby(df[SOURCE]).transform('count')
+    df['count_y'] = df['cos_sim'].groupby(df[TARGET]).transform('count')
+    df['sim_conf'] = (df['cos_sim'] * (df['count_x'] + df['count_y'] - 2) / (
+                df['sum_x'] + df['sum_y'] - 2 * df['cos_sim'])).fillna(1.5)
+    df['degree_conf'] = 1 / (df['count_x'] + df['count_y'] - 1)
+    df = df.drop(columns=['sum_x', 'sum_y', 'count_x', 'count_y'])
+    df['cos_sim'] = normalize_col(df['cos_sim'])
+    df['sim_conf'] = normalize_col(df['sim_conf'])
+    df['degree_conf'] = normalize_col(df['degree_conf'])
+    df[WEIGHT] = -1 * (w_cos * df['cos_sim'] + w_sim_conf * df['sim_conf'] + w_degr_conf * df[
+        'degree_conf'])  # because of matching algo
+    return df
+
+
+def normalize_col(df):
+    df = (df - df.min()) / (df.max() - df.min())
+    return df
+
+
+def embeddings_to_bipartite_graph_vidange(embeddings1, embeddings2, threshold, func=cosine_similarity): #todo: to be cleaned
+    cos_sims = func(embeddings1, embeddings2)
+    edges = cos_sim_matrix_to_edges_vidange(cos_sims, threshold, w_cos = 0.5, w_sim_conf = 0.3, w_degr_conf = 0.2)
+    return nx.from_pandas_edgelist(edges, edge_attr=True)
+
+def normalize_weights_vidange(w_cos, w_degr_conf, w_sim_conf):
+    sum_weights = w_cos + w_sim_conf + w_degr_conf
+    if sum_weights != 1:
+        w_cos /= sum_weights
+        w_sim_conf /= sum_weights
+        w_degr_conf /= sum_weights
+    return w_cos, w_sim_conf, w_degr_conf
+
 
 def matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, prefix_char=False, threshold=0.3, hyperplane_count=0, lsh_count=0, lsh_size=0):
     matches = bipartite_graph_to_matches(embeddings_to_bipartite_graph_lsh(embeddings1, embeddings2, threshold, hyperplane_count, lsh_count, lsh_size), nodes1, nodes2, no_top_pairs)

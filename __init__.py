@@ -27,6 +27,7 @@ BF_LENGTH = 1024
 def main():
     parser = argparser()
     settings = Settings(parser)
+    print(settings.__dict__)
     lsh_count = int(parser.lsh_count)
     lsh_size = int(parser.lsh_size)
     if settings.mode == "graph_calc":

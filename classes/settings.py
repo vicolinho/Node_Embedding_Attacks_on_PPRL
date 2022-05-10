@@ -16,3 +16,4 @@ class Settings:
         self.cos_sim_thold = 0.3
         self.hyperplane_count = 1024
         self.num_top_pairs = 50
+        self.vidange_sim = True
