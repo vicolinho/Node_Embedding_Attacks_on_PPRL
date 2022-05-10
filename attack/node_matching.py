@@ -27,9 +27,9 @@ def bipartite_graph_to_matches(G, nodes1, nodes2, no_top_pairs):
             nodeid1 = nodes1[int(node1[1:])]
             nodeid2 = nodes2[int(node2[1:])]
             highest_pairs.put((-sim, (nodeid1, nodeid2))) # reverse sim needed to biparitite match
-    highest_pairs.get()
+    highest_pairs.get() # not correct if no_top_pairs >= pairs
     matches = matches_from_priority_queue(highest_pairs)
-    return matches
+    return matches # first match has lowest sim
 
 def embeddings_to_binary_lsh(embeddings1, embeddings2, dim):
     binary_lsh1 = np.zeros((len(embeddings1), dim)).astype(int)
@@ -88,7 +88,7 @@ def embeddings_to_bipartite_graph_lsh_dicts(embeddings1, embeddings2, lsh_dicts_
                         weight.append(-sim)  # needed to use minimum weight matching
     edges = DataFrame({SOURCE: source, TARGET: target, WEIGHT: weight})
     if vidange:
-        edges = transform_edges_df_to_vidange(edges, w_cos = 0.5, w_sim_conf = 0.3, w_degr_conf = 0.2)
+        edges = transform_edges_df_to_vidange(edges, w_cos = 0.6, w_sim_conf = 0.3, w_degr_conf = 0.1)
     return nx.from_pandas_edgelist(edges, edge_attr=True)
 
 

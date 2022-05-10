@@ -82,11 +82,15 @@ def generate_graph(lsh_count, lsh_size, parser, record_count, removed_plain_reco
 
 
 def matches_precision_output(merged_embeddings_results, lsh_size, lsh_count, settings, true_matches):
-    matches = node_matching.matches_from_embeddings_combined_graph(merged_embeddings_results, 'u', 'v', 50,
+    matches = node_matching.matches_from_embeddings_combined_graph(merged_embeddings_results, 'u', 'v', max(settings.num_top_pairs),
                                                                    0.3, settings.hyperplane_count, lsh_count, lsh_size)
-    precision = evaluation.evalaute_top_pairs(matches, true_matches)
-    print(merged_embeddings_results.info_string, precision)
-    attack.inout.output_result(merged_embeddings_results.info_string, precision, settings)
+    precision_list = []
+    for top_pairs in settings.num_top_pairs:
+        sub_matches = matches[-top_pairs:]
+        precision = evaluation.evalaute_top_pairs(sub_matches, true_matches)
+        precision_list.append(precision)
+        print(merged_embeddings_results.info_string, top_pairs, precision)
+    attack.inout.output_result(merged_embeddings_results.info_string, precision_list, settings)
 
 
 def print_precision_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb, results_path, record_count,

@@ -41,4 +41,7 @@ def output_result(technique, prec, settings):#, output_path, record_count, thres
     with open(full_path, 'a') as file:
         if header_needed:
             file.write(csv_header)
-        file.write(technique + "," + str(prec) + "\n")
+        prec_string = ""
+        for i in range(0, len(prec)):
+            prec_string += str(settings.num_top_pairs[i]) + ":" + str(prec[i]) + " "
+        file.write(technique + "," + prec_string + "\n")

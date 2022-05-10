@@ -15,5 +15,5 @@ class Settings:
         self.lsh_size = parser.lsh_size
         self.cos_sim_thold = 0.3
         self.hyperplane_count = 1024
-        self.num_top_pairs = 50
+        self.num_top_pairs = [10, 50, 100, 500, 1000]
         self.vidange_sim = True
