@@ -5,12 +5,16 @@ from classes.graphsage_settings import Graphsage_settings
 LAYER_STRUCTURES_LIST = [[512,256,128], [128,128,128,128], [128], [1024,1024,128]]
 ACTIVATION_FUNC_LIST = [3 * ['relu'], 4 * ['relu'], 1 * ['relu'], 3 * ['relu']]
 
-def embeddings_hyperparameter_deepgraphinfomax(G, deepgraphinfomax_settings_list):
+def embeddings_hyperparameter_deepgraphinfomax(G, deepgraphinfomax_settings_list): # not in use because just combined with features which is better with generators but perhaps still needed
     embedding_results_list = []
     for deepgraphinfomax_settings in deepgraphinfomax_settings_list:
         embedding_results = embeddings.generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings)
         embedding_results_list.append(embedding_results)
     return embedding_results_list
+
+def embeddings_hyperparameter_deepgraphinfomax_gen(G, deepgraphinfomax_settings_list):
+    for deepgraphinfomax_settings in deepgraphinfomax_settings_list:
+        yield embeddings.generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings)
 
 def get_default_params_deepgraphinfomax():
     layer_structures_list = LAYER_STRUCTURES_LIST
@@ -24,10 +28,13 @@ def get_default_params_deepgraphinfomax():
 def embeddings_hyperparameter_graphsage(G, graphsage_settings_list, learning_G = None):
     embedding_results_list = []
     for graphsage_settings in graphsage_settings_list:
-        info_string = str(graphsage_settings)
         embedding_results = embeddings.generate_node_embeddings_graphsage(G, graphsage_settings, learning_G)
         embedding_results_list.append(embedding_results)
     return embedding_results_list
+
+def embeddings_hyperparameter_graphsage_gen(G, graphsage_settings_list, learning_G = None):
+    for graphsage_settings in graphsage_settings_list:
+        yield embeddings.generate_node_embeddings_graphsage(G, graphsage_settings, learning_G)
 
 def get_default_params_graphsage():
     layer_structures_list = [[128,128], [128,128]]#, [256, 128], [512, 256, 128]]

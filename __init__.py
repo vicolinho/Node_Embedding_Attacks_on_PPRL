@@ -1,3 +1,5 @@
+from itertools import chain
+
 import networkx as nx
 import numpy as np
 from pandas import DataFrame
@@ -46,11 +48,11 @@ def main():
 def calc_emb_analysis(combined_graph, lsh_count, lsh_size, settings, true_matches):
     embeddings_features = embeddings.just_features_embeddings(combined_graph)
     matches_precision_output(embeddings_features, lsh_size, lsh_count, settings, true_matches)
-    embedding_results_list_graphsage = hyperparameter_tuning.embeddings_hyperparameter_graphsage(combined_graph,
+    embedding_results_gen_graphsage = hyperparameter_tuning.embeddings_hyperparameter_graphsage_gen(combined_graph,
                                                                                                  hyperparameter_tuning.get_default_params_graphsage())
-    embedding_results_list_deepgraphinfomax = hyperparameter_tuning.embeddings_hyperparameter_deepgraphinfomax(
+    embedding_results_gen_deepgraphinfomax = hyperparameter_tuning.embeddings_hyperparameter_deepgraphinfomax_gen(
         combined_graph, hyperparameter_tuning.get_default_params_deepgraphinfomax())
-    for embedding_results in embedding_results_list_graphsage + embedding_results_list_deepgraphinfomax:
+    for embedding_results in chain(embedding_results_gen_graphsage, embedding_results_gen_deepgraphinfomax):
         matches_precision_output(embedding_results, lsh_size, lsh_count, settings, true_matches)
         merged_embeddings_results = embeddings_features.merge(embedding_results)
         matches_precision_output(merged_embeddings_results, lsh_size, lsh_count, settings, true_matches)
