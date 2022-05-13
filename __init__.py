@@ -86,7 +86,7 @@ def matches_precision_output(merged_embeddings_results, lsh_size, lsh_count, set
                                                                    0.3, settings.hyperplane_count, lsh_count, lsh_size)
     precision_list = []
     for top_pairs in settings.num_top_pairs:
-        sub_matches = matches[-top_pairs:]
+        sub_matches = matches[:top_pairs]
         precision = evaluation.evalaute_top_pairs(sub_matches, true_matches)
         precision_list.append(precision)
         print(merged_embeddings_results.info_string, top_pairs, precision)

@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+import pandas as pd
 from ordered_set import OrderedSet
 from pandas import DataFrame
 from sklearn.metrics.pairwise import cosine_similarity
@@ -12,11 +13,22 @@ from attack import blocking
 U = 'u'
 V = 'v'
 
-def bipartite_graph_to_matches(G, nodes1, nodes2, no_top_pairs):
+def bipartite_graph_edges_to_matches(G_edges, nodes1, nodes2, no_top_pairs, mode='shm'):
+    if mode == 'shm':
+        return bipartite_graph_edges_to_matches_shm(G_edges, nodes1, nodes2, no_top_pairs)
+    elif mode == 'mwm':
+        return bipartite_graph_edges_to_matches_mwm(G_edges, nodes1, nodes2, no_top_pairs)
+    elif mode == 'smm':
+        pass
+
+
+def bipartite_graph_edges_to_matches_mwm(G_edges, nodes1, nodes2, no_top_pairs):
+    G = nx.from_pandas_edgelist(G_edges, edge_attr=True)
     highest_pairs = PriorityQueue()
     u = [n for n in G.nodes if n[0] == U]
     try:
         matches = nx.bipartite.minimum_weight_full_matching(G, u)
+        #todo: two other methods
     except ValueError:
         return []
     for node1, node2 in matches.items():
@@ -26,10 +38,10 @@ def bipartite_graph_to_matches(G, nodes1, nodes2, no_top_pairs):
                 highest_pairs.get()
             nodeid1 = nodes1[int(node1[1:])]
             nodeid2 = nodes2[int(node2[1:])]
-            highest_pairs.put((-sim, (nodeid1, nodeid2))) # reverse sim needed to biparitite match
+            highest_pairs.put((sim, (nodeid1, nodeid2))) # sim stays reverse so priority_queue return actual highest sim first
     highest_pairs.get() # not correct if no_top_pairs >= pairs
     matches = matches_from_priority_queue(highest_pairs)
-    return matches # first match has lowest sim
+    return matches
 
 def embeddings_to_binary_lsh(embeddings1, embeddings2, dim):
     binary_lsh1 = np.zeros((len(embeddings1), dim)).astype(int)
@@ -60,15 +72,15 @@ def add_id_to_lsh_dict(i, j, ids_hamming_lsh, lsh_dict, lsh_emb):
         lsh_dict[bitvector] = [OrderedSet(), OrderedSet()]
     lsh_dict[bitvector][j].add(i)
 
-def embeddings_to_bipartite_graph_lsh(embeddings1, embeddings2, threshold, hyperplane_count, lsh_count, lsh_size):
+def embeddings_to_bipartite_graph_edges_lsh(embeddings1, embeddings2, threshold, hyperplane_count, lsh_count, lsh_size):
     binary_lsh1, binary_lsh2 = embeddings_to_binary_lsh(embeddings1, embeddings2, hyperplane_count)
     ids_list_hamming_lsh = blocking.choose_positions(lsh_count, lsh_size, hyperplane_count)
     lsh_dicts_embeddings = create_dicts_lsh_embeddings(binary_lsh1, binary_lsh2, ids_list_hamming_lsh)
-    return embeddings_to_bipartite_graph_lsh_dicts(embeddings1, embeddings2, lsh_dicts_embeddings, threshold)
+    return embeddings_to_bipartite_graph_edges_lsh_dicts(embeddings1, embeddings2, lsh_dicts_embeddings, threshold)
 
 
 
-def embeddings_to_bipartite_graph_lsh_dicts(embeddings1, embeddings2, lsh_dicts_embeddings, threshold, vidange = True):
+def embeddings_to_bipartite_graph_edges_lsh_dicts(embeddings1, embeddings2, lsh_dicts_embeddings, threshold, vidange = True):
     # lsh_dicts_embeddings: list of dicts (key for comparison)
     # [{bitvector: [[u_ids,],[v_ids,]]}, ...]
     source, target, weight = [], [], []
@@ -89,7 +101,20 @@ def embeddings_to_bipartite_graph_lsh_dicts(embeddings1, embeddings2, lsh_dicts_
     edges = DataFrame({SOURCE: source, TARGET: target, WEIGHT: weight})
     if vidange:
         edges = transform_edges_df_to_vidange(edges, w_cos = 0.6, w_sim_conf = 0.3, w_degr_conf = 0.1)
-    return nx.from_pandas_edgelist(edges, edge_attr=True)
+    return edges
+
+def bipartite_graph_edges_to_matches_shm(edges, nodes1, nodes2, no_top_pairs):
+    edge_source_min = edges.loc[edges.groupby([SOURCE])[WEIGHT].idxmin()].reset_index(drop=True)
+    edge_target_min = edges.loc[edges.groupby([TARGET])[WEIGHT].idxmin()].reset_index(drop=True)
+    shm_edges = pd.merge(edge_source_min, edge_target_min, how='inner', on=edge_source_min.columns.values.tolist())
+    shm_edges = shm_edges.sort_values(by=[WEIGHT]).head(no_top_pairs)
+    id_mapping_func = lambda x, node_ids: node_ids[int(x[1:])]
+    shm_edges[SOURCE] = shm_edges[SOURCE].apply(id_mapping_func, args=([nodes1]))
+    shm_edges[TARGET] = shm_edges[TARGET].apply(id_mapping_func, args=([nodes2]))
+    matches = list(shm_edges[[SOURCE, TARGET]].to_records(index=False))
+    return matches
+
+def bipartite_graph_edges_to_matches_shm(edges, nodes1, nodes2, no_top_pairs):
 
 
 def embeddings_to_bipartite_graph(embeddings1, embeddings2, threshold, func=cosine_similarity): #todo: to be cleaned
@@ -162,7 +187,7 @@ def normalize_weights_vidange(w_cos, w_degr_conf, w_sim_conf):
 
 
 def matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, prefix_char=False, threshold=0.3, hyperplane_count=0, lsh_count=0, lsh_size=0):
-    matches = bipartite_graph_to_matches(embeddings_to_bipartite_graph_lsh(embeddings1, embeddings2, threshold, hyperplane_count, lsh_count, lsh_size), nodes1, nodes2, no_top_pairs)
+    matches = bipartite_graph_edges_to_matches(embeddings_to_bipartite_graph_edges_lsh(embeddings1, embeddings2, threshold, hyperplane_count, lsh_count, lsh_size), nodes1, nodes2, no_top_pairs)
     if prefix_char:
         return remove_prefix_from_matches(matches)
     else:
