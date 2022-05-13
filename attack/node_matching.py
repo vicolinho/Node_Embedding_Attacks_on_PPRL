@@ -115,7 +115,7 @@ def bipartite_graph_edges_to_matches_shm(edges, nodes1, nodes2, no_top_pairs):
     return matches
 
 def bipartite_graph_edges_to_matches_shm(edges, nodes1, nodes2, no_top_pairs):
-
+    pass
 
 def embeddings_to_bipartite_graph(embeddings1, embeddings2, threshold, func=cosine_similarity): #todo: to be cleaned
     source = []
