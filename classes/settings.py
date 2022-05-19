@@ -18,3 +18,4 @@ class Settings:
         self.num_top_pairs = [10, 50, 100, 500, 1000]
         self.vidange_sim = True
         self.graph_matching_tech = parser.graph_matching_tech
+        self.min_edges = parser.min_edges

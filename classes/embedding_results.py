@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 
 class Embedding_results:
@@ -18,3 +19,8 @@ class Embedding_results:
             node_ids.append(key)
         merged = Embedding_results(embeddings, node_ids, self.info_string + " + " + other.info_string)
         return merged
+
+    def filter(self, index):
+        df = pd.DataFrame(data=self.embeddings, index=self.nodes)
+        df = df.loc[index]
+        return Embedding_results(df.to_numpy(), df.index, self.info_string)

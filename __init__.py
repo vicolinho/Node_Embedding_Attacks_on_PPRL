@@ -46,13 +46,14 @@ def main():
 
 
 def calc_emb_analysis(combined_graph, lsh_count, lsh_size, settings, true_matches):
-    embeddings_features = embeddings.just_features_embeddings(combined_graph)
+    embeddings_features = embeddings.just_features_embeddings(combined_graph, settings)
     matches_precision_output(embeddings_features, lsh_size, lsh_count, settings, true_matches)
     embedding_results_gen_graphsage = hyperparameter_tuning.embeddings_hyperparameter_graphsage_gen(combined_graph,
                                                                                                  hyperparameter_tuning.get_default_params_graphsage())
     embedding_results_gen_deepgraphinfomax = hyperparameter_tuning.embeddings_hyperparameter_deepgraphinfomax_gen(
         combined_graph, hyperparameter_tuning.get_default_params_deepgraphinfomax())
     for embedding_results in chain(embedding_results_gen_graphsage, embedding_results_gen_deepgraphinfomax):
+        embedding_results = embedding_results.filter(embeddings_features.nodes)
         matches_precision_output(embedding_results, lsh_size, lsh_count, settings, true_matches)
         merged_embeddings_results = embeddings_features.merge(embedding_results)
         matches_precision_output(merged_embeddings_results, lsh_size, lsh_count, settings, true_matches)
@@ -179,6 +180,7 @@ def argparser():
     parser_full.add_argument("--histo_features", help='adds histograms as features', action='store_true')
     parser_full.add_argument("--lsh_size", help='vector size for hamming lsh for indexing', default=0)
     parser_full.add_argument("--lsh_count", help='count of different lsh vectors for indexing', default=1)
+    parser_full.add_argument("--min_edges", help='minimum edge count for a node to be matched', default=20)
 
     parser_save_graph = subparsers.add_parser("graph_load", help='loading instead of calculating sim graph')
     parser_save_graph.add_argument("pickle_file", help="path to pickle file with graph and true matches")
@@ -186,6 +188,7 @@ def argparser():
     parser_save_graph.add_argument("--lsh_size", help='vector size for hamming lsh for indexing', default=0)
     parser_save_graph.add_argument("--lsh_count", help='count of different lsh vectors for indexing', default=1)
     parser_save_graph.add_argument("--graph_matching_tech", help='graph matching technique (shm, mwm, smm)', default='shm')
+    parser_save_graph.add_argument("--min_edges", help='minimum edge count for a node to be matched', default=20)
     args = parser.parse_args()
     return args
 

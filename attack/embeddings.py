@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+import pandas as pd
 import stellargraph.core.convert
 import tensorflow as tf
 from gensim.models import Word2Vec
@@ -157,10 +158,13 @@ def generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings):
 def generate_node_embeddings_gcn(G):
     pass
 
-def just_features_embeddings(G):
+def just_features_embeddings(G, settings):
     embeddings = G.node_features()
+    df = pd.DataFrame(data=embeddings, index=G.nodes())
+    df = df[df[1] >= settings.min_edges] # see node_features.py
+    embeddings = df.to_numpy()
     embeddings = normalize_embeddings(embeddings)
-    return Embedding_results(embeddings, G.nodes(), "features")
+    return Embedding_results(embeddings, df.index, "features")
 
 def combine_embeddings(embeddings_list, node_ids_list):
     embeddings = []
