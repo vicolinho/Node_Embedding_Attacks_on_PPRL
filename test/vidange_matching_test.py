@@ -11,7 +11,6 @@ class MyTestCase(unittest.TestCase):
         threshold = 0.21
         w_cos, w_sim_conf, w_degr_conf = 5, 3, 2
         cos_sim_matrix_to_edges_vidange(cos_sims, threshold, w_cos, w_sim_conf, w_degr_conf)
-        self.assertEqual(True, False)  # add assertion here
 
     def initialize_cos_sim(self):
         cos_sims = np.array(8 * [8 * [0.2]])

@@ -13,13 +13,13 @@ from attack import blocking
 U = 'u'
 V = 'v'
 
-def bipartite_graph_edges_to_matches(G_edges, nodes1, nodes2, no_top_pairs, mode='shm'):
+def bipartite_graph_edges_to_matches(G_edges, nodes1, nodes2, no_top_pairs, mode='smm'):
     if mode == 'shm':
         return bipartite_graph_edges_to_matches_shm(G_edges, nodes1, nodes2, no_top_pairs)
     elif mode == 'mwm':
         return bipartite_graph_edges_to_matches_mwm(G_edges, nodes1, nodes2, no_top_pairs)
     elif mode == 'smm':
-        pass
+        return bipartite_graph_edges_to_matches_smm(G_edges, nodes1, nodes2, no_top_pairs)
 
 
 def bipartite_graph_edges_to_matches_mwm(G_edges, nodes1, nodes2, no_top_pairs):
@@ -72,11 +72,11 @@ def add_id_to_lsh_dict(i, j, ids_hamming_lsh, lsh_dict, lsh_emb):
         lsh_dict[bitvector] = [OrderedSet(), OrderedSet()]
     lsh_dict[bitvector][j].add(i)
 
-def embeddings_to_bipartite_graph_edges_lsh(embeddings1, embeddings2, threshold, hyperplane_count, lsh_count, lsh_size):
-    binary_lsh1, binary_lsh2 = embeddings_to_binary_lsh(embeddings1, embeddings2, hyperplane_count)
-    ids_list_hamming_lsh = blocking.choose_positions(lsh_count, lsh_size, hyperplane_count)
+def embeddings_to_bipartite_graph_edges_lsh(embeddings1, embeddings2, settings):
+    binary_lsh1, binary_lsh2 = embeddings_to_binary_lsh(embeddings1, embeddings2, settings.hyperplane_count)
+    ids_list_hamming_lsh = blocking.choose_positions(settings.lsh_count, settings.lsh_size, settings.hyperplane_count)
     lsh_dicts_embeddings = create_dicts_lsh_embeddings(binary_lsh1, binary_lsh2, ids_list_hamming_lsh)
-    return embeddings_to_bipartite_graph_edges_lsh_dicts(embeddings1, embeddings2, lsh_dicts_embeddings, threshold)
+    return embeddings_to_bipartite_graph_edges_lsh_dicts(embeddings1, embeddings2, lsh_dicts_embeddings, settings.cos_sim_thold)
 
 
 
@@ -115,7 +115,46 @@ def bipartite_graph_edges_to_matches_shm(edges, nodes1, nodes2, no_top_pairs):
     return matches
 
 def bipartite_graph_edges_to_matches_smm(edges, nodes1, nodes2, no_top_pairs):
-    pass
+    # 2 DataFrame u, v (as indices): current_partner, preference list
+    PREF_LIST = 'pref_list'
+    CURRENT_PARTNER = 'current_partner'
+    edges[TARGET + WEIGHT] = list(zip(edges[TARGET], edges[WEIGHT]))
+    pref_source = edges.sort_values(by=[SOURCE, WEIGHT]).groupby(SOURCE, sort=False)[TARGET+WEIGHT].agg(list)
+    pref_target = edges.sort_values(by=[TARGET, WEIGHT]).groupby(TARGET, sort=False)[SOURCE].agg(list)
+    dummy_col = pd.Series(len(pref_source) * [None], index=pref_source.index)
+    df_source = pd.concat([dummy_col, dummy_col.copy(), pref_source], axis=1, keys=[CURRENT_PARTNER, WEIGHT, PREF_LIST])
+    dummy_col = pd.Series(len(pref_target) * [None], index=pref_target.index)
+    df_target = pd.concat([dummy_col, dummy_col.copy(), pref_target], axis=1, keys=[CURRENT_PARTNER, WEIGHT, PREF_LIST])
+    left_nodes_with_possible_matches = list(df_source.index)
+    while len(left_nodes_with_possible_matches) > 0:
+        u = left_nodes_with_possible_matches[0]
+        v_tuple = df_source.loc[u, PREF_LIST].pop(0)
+        v = v_tuple[0]
+        v_partner = df_target.loc[v, CURRENT_PARTNER]
+        if v_partner == None:
+            df_source.loc[u, CURRENT_PARTNER] = v
+            df_source.loc[u, WEIGHT] = v_tuple[1]
+            df_target.loc[v, CURRENT_PARTNER] = u
+            left_nodes_with_possible_matches.pop(0)
+        elif df_target.loc[v, PREF_LIST].index(u) < df_target.loc[v, PREF_LIST].index(v_partner):
+            df_source.loc[u, CURRENT_PARTNER] = v
+            df_source.loc[u, WEIGHT] = v_tuple[1]
+            df_source.loc[v_partner, CURRENT_PARTNER] = None
+            df_source.loc[v_partner, WEIGHT] = None
+            df_target.loc[v, CURRENT_PARTNER] = u
+            left_nodes_with_possible_matches.pop(0)
+            if len(df_source.loc[v_partner, PREF_LIST]) != 0:
+                left_nodes_with_possible_matches.insert(0, v_partner)
+        else:
+            if len(df_source.loc[u, PREF_LIST]) == 0:
+                left_nodes_with_possible_matches.pop(0)
+    id_mapping_func = lambda x, node_ids: node_ids[int(x[1:])]
+    df_source = df_source.dropna()
+    df_source[SOURCE] = df_source.index.to_series().apply(id_mapping_func, args=([nodes1]))
+    df_source[TARGET] = df_source[CURRENT_PARTNER].apply(id_mapping_func, args=([nodes2]))
+    df_source = df_source.sort_values(by=WEIGHT)
+    matches = list(df_source[[SOURCE, TARGET]].to_records(index=False))
+    return matches[:no_top_pairs]
 
 def embeddings_to_bipartite_graph(embeddings1, embeddings2, threshold, func=cosine_similarity): #todo: to be cleaned
     source = []
@@ -186,16 +225,16 @@ def normalize_weights_vidange(w_cos, w_degr_conf, w_sim_conf):
     return w_cos, w_sim_conf, w_degr_conf
 
 
-def matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, prefix_char=False, threshold=0.3, hyperplane_count=0, lsh_count=0, lsh_size=0):
-    matches = bipartite_graph_edges_to_matches(embeddings_to_bipartite_graph_edges_lsh(embeddings1, embeddings2, threshold, hyperplane_count, lsh_count, lsh_size), nodes1, nodes2, no_top_pairs)
+def matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, settings, prefix_char=False):
+    matches = bipartite_graph_edges_to_matches(embeddings_to_bipartite_graph_edges_lsh(embeddings1, embeddings2, settings), nodes1, nodes2, max(settings.num_top_pairs), settings.graph_matching_tech)
     if prefix_char:
         return remove_prefix_from_matches(matches)
     else:
         return matches
 
-def matches_from_embeddings_combined_graph(embedding_results, id1, id2, no_top_pairs, threshold, hyperplane_count, lsh_count, lsh_size):
+def matches_from_embeddings_combined_graph(embedding_results, id1, id2, settings):
     embeddings1, embeddings2, nodes1, nodes2 = split_embeddings_by_nodes(embedding_results.embeddings, embedding_results.nodes, id1, id2)
-    return matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, no_top_pairs, True, threshold, hyperplane_count, lsh_count, lsh_size)
+    return matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, settings, True)
 
 
 def split_embeddings_by_nodes(embeddings, nodes, prefix1, prefix2):

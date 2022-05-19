@@ -82,8 +82,7 @@ def generate_graph(lsh_count, lsh_size, parser, record_count, removed_plain_reco
 
 
 def matches_precision_output(merged_embeddings_results, lsh_size, lsh_count, settings, true_matches):
-    matches = node_matching.matches_from_embeddings_combined_graph(merged_embeddings_results, 'u', 'v', max(settings.num_top_pairs),
-                                                                   0.3, settings.hyperplane_count, lsh_count, lsh_size)
+    matches = node_matching.matches_from_embeddings_combined_graph(merged_embeddings_results, 'u', 'v', settings)
     precision_list = []
     for top_pairs in settings.num_top_pairs:
         sub_matches = matches[:top_pairs]
@@ -100,10 +99,9 @@ def print_precision_combined_embeddings(list_ids, embedding_func_names, embeddin
     attack.inout.output_result(func_list, prec, results_path, record_count, threshold, removed_plain_record_frac, histo_features, lsh_count, lsh_size)
 
 
-def prec_vis_embeddings(embeddings_comb, node_ids_comb, embedding_func_name, true_matches, hyperplane_count, lsh_count, lsh_size):
+def prec_vis_embeddings(embeddings_comb, node_ids_comb, embedding_func_name, true_matches, settings):
     #visualization.vis(embeddings_comb, node_ids_comb, true_matches)
-    matches = node_matching.matches_from_embeddings_combined_graph(embeddings_comb, node_ids_comb, 'u', 'v', 50,
-                                                                   0.3, hyperplane_count, lsh_count, lsh_size)
+    matches = node_matching.matches_from_embeddings_combined_graph(embeddings_comb, node_ids_comb, 'u', 'v', settings)
     precision = evaluation.evalaute_top_pairs(matches, true_matches)
     print(embedding_func_name, precision)
     return embedding_func_name, precision
@@ -116,7 +114,7 @@ def prec_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, no
 
     emb, node_ids = embeddings.combine_embeddings(embeddings_comb_list, ids_comb_list)
     visualization.vis(emb, node_ids, true_matches)
-    matches = node_matching.matches_from_embeddings_combined_graph(emb, node_ids, 'u', 'v', 50, 0.3, hyperplane_count, lsh_count, lsh_size)
+    matches = node_matching.matches_from_embeddings_combined_graph(emb, node_ids, 'u', 'v', settings)
     precision = evaluation.evalaute_top_pairs(matches, true_matches)
     print(embeddings_func_list, precision)
     return embeddings_func_list, precision
@@ -187,6 +185,7 @@ def argparser():
     parser_save_graph.add_argument("results_path", help='path to results output file')
     parser_save_graph.add_argument("--lsh_size", help='vector size for hamming lsh for indexing', default=0)
     parser_save_graph.add_argument("--lsh_count", help='count of different lsh vectors for indexing', default=1)
+    parser_save_graph.add_argument("--graph_matching_tech", help='graph matching technique (shm, mwm, smm)', default='shm')
     args = parser.parse_args()
     return args
 

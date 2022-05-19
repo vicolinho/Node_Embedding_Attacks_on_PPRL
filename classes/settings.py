@@ -17,3 +17,4 @@ class Settings:
         self.hyperplane_count = 1024
         self.num_top_pairs = [10, 50, 100, 500, 1000]
         self.vidange_sim = True
+        self.graph_matching_tech = parser.graph_matching_tech
