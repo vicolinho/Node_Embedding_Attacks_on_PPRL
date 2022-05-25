@@ -13,7 +13,7 @@ from attack import blocking
 U = 'u'
 V = 'v'
 
-def bipartite_graph_edges_to_matches(G_edges, nodes1, nodes2, no_top_pairs, mode='smm'):
+def bipartite_graph_edges_to_matches(G_edges, nodes1, nodes2, no_top_pairs, mode):
     if mode == 'shm':
         return bipartite_graph_edges_to_matches_shm(G_edges, nodes1, nodes2, no_top_pairs)
     elif mode == 'mwm':

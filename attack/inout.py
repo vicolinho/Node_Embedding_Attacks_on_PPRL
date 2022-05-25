@@ -33,7 +33,7 @@ def get_filename_template(settings):
 
 
 def output_result(technique, prec, settings):#, output_path, record_count, threshold, removed_frac, histo_features, lsh_count, lsh_size):
-    csv_header = "technique,prec\n"
+    csv_header = "technique,prec,settings\n"
     filename = get_filename_template(settings) + ".csv"
     output_path = settings.results_path + "/" if settings.results_path[-1] != "/" else settings.results_path
     full_path = output_path + filename
@@ -44,4 +44,4 @@ def output_result(technique, prec, settings):#, output_path, record_count, thres
         prec_string = ""
         for i in range(0, len(prec)):
             prec_string += str(settings.num_top_pairs[i]) + ":" + str(prec[i]) + " "
-        file.write(technique + "," + prec_string + "\n")
+        file.write(technique + "," + prec_string + "," + str(settings.__dict__) + "\n")
