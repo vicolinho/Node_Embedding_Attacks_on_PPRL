@@ -52,7 +52,8 @@ def calc_emb_analysis(combined_graph, lsh_count, lsh_size, settings, true_matche
                                                                                                  hyperparameter_tuning.get_default_params_graphsage())
     embedding_results_gen_deepgraphinfomax = hyperparameter_tuning.embeddings_hyperparameter_deepgraphinfomax_gen(
         combined_graph, hyperparameter_tuning.get_default_params_deepgraphinfomax())
-    for embedding_results in chain(embedding_results_gen_graphsage, embedding_results_gen_deepgraphinfomax):
+    #for embedding_results in chain(embedding_results_gen_graphsage, embedding_results_gen_deepgraphinfomax):
+    for embedding_results in chain(embedding_results_gen_deepgraphinfomax, embedding_results_gen_graphsage):
         embedding_results = embedding_results.filter(embeddings_features.nodes)
         matches_precision_output(embedding_results, lsh_size, lsh_count, settings, true_matches)
         merged_embeddings_results = embeddings_features.merge(embedding_results)
@@ -189,6 +190,8 @@ def argparser():
     parser_save_graph.add_argument("--lsh_count", help='count of different lsh vectors for indexing', default=1)
     parser_save_graph.add_argument("--graph_matching_tech", help='graph matching technique (shm, mwm, smm)', default='shm')
     parser_save_graph.add_argument("--min_edges", help='minimum edge count for a node to be matched', default=20)
+    #parser_save_graph.add_argument("--graphsage_settings_file", help='path to graphsage settings file for hyperparameter tuning')
+    #parser_save_graph.add_argument("--deepgraphinfomax_settings_file", help='path to deepgraphinfomax settings file for hyperparameter tuning')
     args = parser.parse_args()
     return args
 

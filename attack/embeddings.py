@@ -139,7 +139,7 @@ def generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings):
     model.compile(loss=tf.nn.sigmoid_cross_entropy_with_logits, optimizer=Adam(lr=1e-3))
     epochs = 100
     es = EarlyStopping(monitor="loss", min_delta=0, patience=20)
-    history = model.fit(gen, epochs=epochs, verbose=0, callbacks=[es])
+    history = model.fit(gen, epochs=epochs, verbose=1, callbacks=[es])
     plot_history(history)
     x_emb_in, x_emb_out = gcn_model.in_out_tensors()
 

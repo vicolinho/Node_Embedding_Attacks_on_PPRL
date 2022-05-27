@@ -1,9 +1,7 @@
 from attack import embeddings
 from classes.deepgraphinfomax_settings import Deepgraphinfomax_settings
 from classes.graphsage_settings import Graphsage_settings
-
-LAYER_STRUCTURES_LIST = [[512,256,128], [128,128,128,128], [128], [1024,1024,128]]
-ACTIVATION_FUNC_LIST = [3 * ['relu'], 4 * ['relu'], 1 * ['relu'], 3 * ['relu']]
+import config.config as config
 
 def embeddings_hyperparameter_deepgraphinfomax(G, deepgraphinfomax_settings_list): # not in use because just combined with features which is better with generators but perhaps still needed
     embedding_results_list = []
@@ -17,8 +15,8 @@ def embeddings_hyperparameter_deepgraphinfomax_gen(G, deepgraphinfomax_settings_
         yield embeddings.generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings)
 
 def get_default_params_deepgraphinfomax():
-    layer_structures_list = LAYER_STRUCTURES_LIST
-    activation_func_list = ACTIVATION_FUNC_LIST
+    layer_structures_list = config.deepgraphinfomax_settings[config.LAYER_STRUCTURES_LIST]
+    activation_func_list = config.deepgraphinfomax_settings[config.ACTIVATION_FUNC_LIST]
     deepgraphinfomax_settings_list = []
     for i in range(0, len(layer_structures_list)):
         deepgraphinfomax_settings = Deepgraphinfomax_settings(layers=layer_structures_list[i], activations=activation_func_list[i])
@@ -37,8 +35,8 @@ def embeddings_hyperparameter_graphsage_gen(G, graphsage_settings_list, learning
         yield embeddings.generate_node_embeddings_graphsage(G, graphsage_settings, learning_G)
 
 def get_default_params_graphsage():
-    layer_structures_list = [[128,128], [128,128]]#, [256, 128], [512, 256, 128]]
-    num_samples_list = [[10,5], [20,20]]#, [10, 5], [30, 20, 10]]
+    layer_structures_list = config.graphsage_settings[config.LAYER_STRUCTURES_LIST]
+    num_samples_list = config.graphsage_settings[config.NUM_SAMPLES_LIST]
     graphsage_settings_list = []
     for i in range(0, len(layer_structures_list)):
         graphsage_settings = Graphsage_settings(layers=layer_structures_list[i], num_samples=num_samples_list[i])
