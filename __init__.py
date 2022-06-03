@@ -182,6 +182,8 @@ def argparser():
     parser_full.add_argument("--lsh_size", help='vector size for hamming lsh for indexing', default=0)
     parser_full.add_argument("--lsh_count", help='count of different lsh vectors for indexing', default=1)
     parser_full.add_argument("--min_edges", help='minimum edge count for a node to be matched', default=20)
+    parser_full.add_argument("--graph_matching_tech", help='graph matching technique (shm, mwm, smm)', default='shm')
+
 
     parser_save_graph = subparsers.add_parser("graph_load", help='loading instead of calculating sim graph')
     parser_save_graph.add_argument("pickle_file", help="path to pickle file with graph and true matches")
