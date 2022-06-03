@@ -9,6 +9,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from stellargraph import StellarGraph
 from stellargraph.data import BiasedRandomWalk, UnsupervisedSampler
+from stellargraph.datasets import datasets
 from stellargraph.layer import GraphSAGE, link_classification, GCN, DeepGraphInfomax
 from stellargraph.mapper import GraphSAGELinkGenerator, GraphSAGENodeGenerator, GraphWaveGenerator, \
     FullBatchNodeGenerator, CorruptedGenerator
@@ -16,6 +17,7 @@ from stellargraph.utils import plot_history
 from tensorflow import keras
 from tensorflow.python.keras.callbacks import EarlyStopping
 from tensorflow.python.keras.models import Model
+#from tensorflow.keras import Model
 from tensorflow.python.keras.optimizer_v2.adam import Adam
 
 from classes.embedding_results import Embedding_results
@@ -103,10 +105,12 @@ def generate_node_embeddings_graphsage(G, graphsage_settings, learning_G = None)
     return Embedding_results(node_embeddings, nodes, str(graphsage_settings))
 
 
-def generate_node_embeddings_graphwave(G):
-    sample_points = np.linspace(0, 50, 25).astype(np.float32)
-    degree = 20
-    scales = [2, 4]
+def generate_node_embeddings_graphwave(G, graphwave_settings):
+    sample_points = np.linspace(
+        0, graphwave_settings.sample_p_max_val, graphwave_settings.no_samples
+    ).astype(np.float32)
+    degree = graphwave_settings.degree
+    scales = graphwave_settings.scales
 
     generator = GraphWaveGenerator(G, scales=scales, degree=degree)
     node_ids = G.nodes()
@@ -117,7 +121,7 @@ def generate_node_embeddings_graphwave(G):
     embeddings = [x.numpy() for x in embeddings_dataset]
     embeddings = np.reshape(embeddings, (len(embeddings), len(embeddings[0][0])))
     embeddings_transformed = normalize_embeddings(embeddings)
-    return embeddings_transformed, node_ids
+    return Embedding_results(embeddings_transformed, node_ids, str(graphwave_settings))
 
 
 def normalize_embeddings(embeddings):
@@ -135,8 +139,8 @@ def generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings):
     infomax = DeepGraphInfomax(gcn_model, corrupted_generator)
     x_in, x_out = infomax.in_out_tensors()
 
-    model = Model(inputs=x_in, outputs=x_out)
-    model.compile(loss=tf.nn.sigmoid_cross_entropy_with_logits, optimizer=Adam(lr=1e-3))
+    model = keras.Model(inputs=x_in, outputs=x_out)
+    model.compile(loss=tf.nn.sigmoid_cross_entropy_with_logits, optimizer=keras.optimizers.Adam(lr=1e-3))
     epochs = 100
     es = EarlyStopping(monitor="loss", min_delta=0, patience=20)
     history = model.fit(gen, epochs=epochs, verbose=1, callbacks=[es])
@@ -145,13 +149,14 @@ def generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings):
 
     # for full batch models, squeeze out the batch dim (which is 1)
     x_out = tf.squeeze(x_emb_out, axis=0)
-    emb_model = Model(inputs=x_emb_in, outputs=x_out)
+    emb_model = keras.Model(inputs=x_emb_in, outputs=x_out)
 
     node_subjects = G.nodes()
 
 
     node_gen = fullbatch_generator.flow(node_subjects)
     embeddings = emb_model.predict(node_gen)
+    embeddings = normalize_embeddings(embeddings)
     return Embedding_results(embeddings, node_subjects, str(deepgraphinfomax_settings))
 
 
