@@ -6,12 +6,12 @@ from pandas import DataFrame
 from stellargraph import StellarGraph
 
 import attack.inout
-from attack import embeddings, inout
+from attack.argparser import argparser
+from attack import embeddings, inout, logs
 from attack import blocking, preprocessing, sim_graph, node_matching, node_features, import_data, evaluation, \
     visualization
 
 import pandas as pd
-import argparse
 
 from attack import hyperparameter_tuning
 from classes.settings import Settings
@@ -76,9 +76,9 @@ def generate_graph(lsh_count, lsh_size, parser, record_count, removed_plain_reco
                                                             num_of_hash_func=15, threshold=threshold, id='v')
     max_degree = max(len(nodes_plain), len(nodes_encoded)) - 1
     graph_plain = sim_graph.create_graph(nodes_plain, edges_plain, min_nodes=3, max_degree=max_degree,
-                                         histo_features=parser.histo_features)
+                                         settings=settings)
     graph_encoded = sim_graph.create_graph(nodes_encoded, edges_encoded, min_nodes=3, max_degree=max_degree,
-                                           histo_features=parser.histo_features)
+                                           settings=settings)
     combined_graph_nx = nx.compose(graph_plain, graph_encoded)
     combined_graph = StellarGraph.from_networkx(combined_graph_nx, node_features="feature")
     inout.save_graph_tp(combined_graph, true_matches, settings)
@@ -145,6 +145,7 @@ def play_around_with_lsh_parameters(encoded_file):
 
 def create_sim_graph_encoded(encoded_data, encoded_attr, bf_length, lsh_count, lsh_size, num_of_hash_func, threshold, id):
     blk_dicts_encoded = blocking.get_dict_dataframes_by_blocking_keys_encoded(encoded_data, encoded_attr, BITARRAY, bf_length, lsh_count, lsh_size)
+    logs.log_blk_dist(blk_dicts_encoded)
     nodes = node_features.esti_qgram_count_encoded(encoded_data[BITARRAY], encoded_data[encoded_attr], bf_length, num_of_hash_func, id)
     edges = DataFrame()
     for blk_dict_encoded in blk_dicts_encoded:
@@ -162,42 +163,13 @@ def create_sim_graph_plain_old(plain_data, qgram_attributes, blk_attributes, blk
 def create_sim_graph_plain(plain_data, encoded_attr, threshold, bf_length, lsh_count, lsh_size, num_of_hash_func, id):
     nodes = node_features.qgram_count_plain(plain_data[QGRAMS], id)
     blk_dicts_encoded = blocking.get_dict_dataframes_by_blocking_keys_encoded(plain_data, QGRAMS, QGRAMS, bf_length, lsh_count, lsh_size)
+    logs.log_blk_dist(blk_dicts_encoded)
     edges = DataFrame()
     for blk_dict_encoded in blk_dicts_encoded:
         df_temp = edges_df_from_blk_plain(blk_dict_encoded, [], threshold, id) # qgram_attr isn't needed, not very clean code!
         edges = pd.concat([edges, df_temp])
     return nodes, edges
 
-def argparser():
-    parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(dest='mode')
-
-    parser_full = subparsers.add_parser('graph_calc', help="save graph and calculate precision")
-    parser_full.add_argument("--analysis", help='needed if analysis should be conducted', action='store_true')
-    parser_full.add_argument("plain_file", help='path to plain dataset')
-    parser_full.add_argument("encoded_file", help='path to encoded dataset')
-    parser_full.add_argument("results_path", help='path to results output file')
-    parser_full.add_argument("threshold", help='similarity threshold to be included in graph')
-    parser_full.add_argument("--remove_frac_plain", help='fraction of plain records to be excluded')
-    parser_full.add_argument("--record_count", help='restrict record count to be processed')
-    parser_full.add_argument("--histo_features", help='adds histograms as features', action='store_true')
-    parser_full.add_argument("--lsh_size", help='vector size for hamming lsh for indexing', default=0)
-    parser_full.add_argument("--lsh_count", help='count of different lsh vectors for indexing', default=1)
-    parser_full.add_argument("--min_edges", help='minimum edge count for a node to be matched', default=0)
-    parser_full.add_argument("--graph_matching_tech", help='graph matching technique (shm, mwm, smm)', default='shm')
-
-
-    parser_save_graph = subparsers.add_parser("graph_load", help='loading instead of calculating sim graph')
-    parser_save_graph.add_argument("pickle_file", help="path to pickle file with graph and true matches")
-    parser_save_graph.add_argument("results_path", help='path to results output file')
-    parser_save_graph.add_argument("--lsh_size", help='vector size for hamming lsh for indexing', default=0)
-    parser_save_graph.add_argument("--lsh_count", help='count of different lsh vectors for indexing', default=1)
-    parser_save_graph.add_argument("--graph_matching_tech", help='graph matching technique (shm, mwm, smm)', default='shm')
-    parser_save_graph.add_argument("--min_edges", help='minimum edge count for a node to be matched', default=0)
-    #parser_save_graph.add_argument("--graphsage_settings_file", help='path to graphsage settings file for hyperparameter tuning')
-    #parser_save_graph.add_argument("--deepgraphinfomax_settings_file", help='path to deepgraphinfomax settings file for hyperparameter tuning')
-    args = parser.parse_args()
-    return args
 
 if __name__ == '__main__':
     import time

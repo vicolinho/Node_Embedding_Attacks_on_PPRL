@@ -19,14 +19,15 @@ def save_graph_tp(graph, true_matches, settings):
 def get_filename_template(settings):
     if settings.mode == "graph_calc":
         histo_suffix = '_histo' if settings.histo_features else ''
+        fast_suffix = '_fast' if settings.fast_mode else ''
         if settings.lsh_size == 0:
-            filename = "c{0}_t{1}_r{2}{3}".format(settings.record_count, settings.threshold,
-                                                  settings.removed_plain_record_frac, histo_suffix)
+            filename = "c{0}_t{1}_r{2}{3}{4}".format(settings.record_count, settings.threshold,
+                                                  settings.removed_plain_record_frac, histo_suffix, fast_suffix)
         else:
-            filename = "c{0}_t{1}_r{2}_lshc{3}_lshs{4}{5}".format(settings.record_count, settings.threshold,
+            filename = "c{0}_t{1}_r{2}_lshc{3}_lshs{4}{5}{6}".format(settings.record_count, settings.threshold,
                                                                   settings.removed_plain_record_frac,
                                                                   settings.lsh_count,
-                                                                  settings.lsh_size, histo_suffix)
+                                                                  settings.lsh_size, histo_suffix, fast_suffix)
     else:
         filename = settings.pickle_file.split("/")[-1].split(".pkl")[0]
     return filename

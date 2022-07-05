@@ -7,6 +7,7 @@ class Settings:
             self.removed_plain_record_frac = float(parser.remove_frac_plain)
             self.histo_features = bool(parser.histo_features)
             self.analysis = bool(parser.analysis)
+            self.fast_mode = bool(parser.fast_mode)
         else:
             self.pickle_file = parser.pickle_file
 

@@ -26,11 +26,12 @@ def adjusted_number_of_qgrams(bitarray, bf_length, num_hash_f):
     number_of_bits = bitarray.count(1)
     return compute_number_of_qgrams(bf_length, num_hash_f, number_of_bits)
 
-def add_node_features_vidange_networkx(G, qgram_count_df, max_degree, histo_features):
+def add_node_features_vidange_networkx(G, qgram_count_df, max_degree, settings):
     # List of features from Vidange et al. A Graph Matching Attack on PPRL
     # Histogram on log-scale (Heimann et al. REGAL: Representation Learning-Based Graph Alignment)
     G = nx.Graph(G) # if MultiGraph()
-    betw_centr_dict = betweenness_centrality(G)
+    if not settings.fast_mode:
+        betw_centr_dict = betweenness_centrality(G)
     degr_centr_dict = degree_centrality(G)
     for node_id in G.nodes:
         n = G.nodes[node_id]
@@ -46,21 +47,25 @@ def add_node_features_vidange_networkx(G, qgram_count_df, max_degree, histo_feat
         edge_min = np.min(list_edge_weights)
         edge_avg = np.mean(list_edge_weights)
         edge_std = np.std(list_edge_weights)
-        egonet = ego_graph(G, node_id, radius=1, center=True, undirected=False, distance=None)
-        egonet_node_count = len(egonet.nodes())
-        egonet_degr = len(egonet.edges())
-        egonet_dens = egonet_degr / (egonet_node_count / 2 * (egonet_node_count - 1))
-        two_hop_egonet = ego_graph(G, node_id, radius=2, center=True, undirected=False, distance=None)
-        one_hop_degrees = Counter([d for n, d in G.degree(egonet.nodes())])
-        two_hop_degrees = Counter([d for n, d in G.degree(two_hop_egonet.nodes())])
-        betw_centr = betw_centr_dict[node_id]
+        if not settings.fast_mode:
+            egonet = ego_graph(G, node_id, radius=1, center=True, undirected=False, distance=None)
+            egonet_node_count = len(egonet.nodes())
+            egonet_degr = len(egonet.edges())
+            egonet_dens = egonet_degr / (egonet_node_count / 2 * (egonet_node_count - 1))
+            two_hop_egonet = ego_graph(G, node_id, radius=2, center=True, undirected=False, distance=None)
+            one_hop_degrees = Counter([d for n, d in G.degree(egonet.nodes())])
+            two_hop_degrees = Counter([d for n, d in G.degree(two_hop_egonet.nodes())])
+            betw_centr = betw_centr_dict[node_id]
         degr_centr = degr_centr_dict[node_id]
-        if histo_features:
+        if settings.histo_features:
             one_hop_histo = counter_to_log_scale_histogram(one_hop_degrees, max_degree)
             two_hop_histo = counter_to_log_scale_histogram(two_hop_degrees, max_degree)
         else:
             one_hop_histo, two_hop_histo = [0], [0]
-        n['feature'] = [node_len, node_degr, edge_max, edge_min, edge_avg, edge_std, egonet_degr, egonet_dens, betw_centr, degr_centr, *one_hop_histo, *two_hop_histo]
+        if settings.fast_mode:
+            n['feature'] = [node_len, node_degr, edge_max, edge_min, edge_avg, edge_std, degr_centr]
+        else:
+            n['feature'] = [node_len, node_degr, edge_max, edge_min, edge_avg, edge_std, egonet_degr, egonet_dens, betw_centr, degr_centr, *one_hop_histo, *two_hop_histo]
 
     return G
 
