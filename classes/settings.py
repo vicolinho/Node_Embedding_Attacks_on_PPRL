@@ -8,6 +8,7 @@ class Settings:
             self.histo_features = bool(parser.histo_features)
             self.analysis = bool(parser.analysis)
             self.fast_mode = bool(parser.fast_mode)
+            self.graph_path = parser.graph_path
         else:
             self.pickle_file = parser.pickle_file
 

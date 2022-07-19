@@ -9,7 +9,7 @@ def load_graph_tp(graph_path):
     return tpl[0], tpl[1]
 
 def save_graph_tp(graph, true_matches, settings):
-    subpath = "graphs"
+    subpath = settings.graph_path
     os.makedirs(subpath, exist_ok=True)
     filename = subpath + "/" + get_filename_template(settings) + ".pkl"
     tpl = (graph, true_matches)
@@ -36,6 +36,7 @@ def get_filename_template(settings):
 def output_result(technique, prec, settings):#, output_path, record_count, threshold, removed_frac, histo_features, lsh_count, lsh_size):
     csv_header = "technique,prec,settings\n"
     filename = get_filename_template(settings) + ".csv"
+    os.makedirs(settings.results_path, exist_ok=True)
     output_path = settings.results_path + "/" if settings.results_path[-1] != "/" else settings.results_path
     full_path = output_path + filename
     header_needed = not Path(full_path).is_file()
