@@ -20,6 +20,7 @@ from tensorflow.python.keras.models import Model
 #from tensorflow.keras import Model
 from tensorflow.python.keras.optimizer_v2.adam import Adam
 
+from attack import inout
 from classes.embedding_results import Embedding_results
 
 
@@ -105,7 +106,7 @@ def generate_node_embeddings_graphsage(G, graphsage_settings, learning_G = None)
     return Embedding_results(node_embeddings, nodes, str(graphsage_settings))
 
 
-def generate_node_embeddings_graphwave(G, graphwave_settings):
+def generate_node_embeddings_graphwave_sg(G, graphwave_settings):
     sample_points = np.linspace(
         0, graphwave_settings.sample_p_max_val, graphwave_settings.no_samples
     ).astype(np.float32)
@@ -120,6 +121,21 @@ def generate_node_embeddings_graphwave(G, graphwave_settings):
 
     embeddings = [x.numpy() for x in embeddings_dataset]
     embeddings = np.reshape(embeddings, (len(embeddings), len(embeddings[0][0])))
+    embeddings_transformed = normalize_embeddings(embeddings)
+    return Embedding_results(embeddings_transformed, node_ids, str(graphwave_settings))
+
+
+def generate_node_embeddings_graphwave(G, graphwave_settings):
+    import sys
+    sys.path.insert(0, "C:\\Users\\Tim\\PycharmProjects\\graphwave-python3\\graphwave")
+    import graphwave
+    sample_points = np.linspace(
+        0, graphwave_settings.sample_p_max_val, graphwave_settings.no_samples
+    )
+    chi, heat_print, taus = graphwave.graphwave_alg(G, sample_points)
+
+    node_ids = list(G)
+    embeddings = chi
     embeddings_transformed = normalize_embeddings(embeddings)
     return Embedding_results(embeddings_transformed, node_ids, str(graphwave_settings))
 

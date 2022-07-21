@@ -47,3 +47,25 @@ def output_result(technique, prec, settings):#, output_path, record_count, thres
         for i in range(0, len(prec)):
             prec_string += str(settings.num_top_pairs[i]) + ":" + str(prec[i]) + " "
         file.write(technique + "," + prec_string + "," + str(settings.__dict__) + "\n")
+
+def get_path_for_graphwave_graph(settings):
+    subpath, file = settings.pickle_file.split('/', 1)
+    subpath = subpath + "_graphwave"
+    return subpath + "/" + file
+
+def graphwave_graph_exists(settings):
+    return os.path.exists(get_path_for_graphwave_graph(settings))
+
+def save_graph_for_graphwave_org(graph, settings):
+    filename = get_path_for_graphwave_graph(settings)
+    subpath, _ = filename.split('/', 1)
+    os.makedirs(subpath, exist_ok=True)
+    with open(filename, 'wb') as output:
+        pickle.dump(graph, output, pickle.HIGHEST_PROTOCOL)
+
+def load_graph_for_graphwave_org(settings):
+    filename = get_path_for_graphwave_graph(settings)
+    with open(filename, 'rb') as input:
+        graph = pickle.load(input)
+    return graph
+
