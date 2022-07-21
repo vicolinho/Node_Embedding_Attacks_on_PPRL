@@ -53,7 +53,7 @@ def calc_emb_analysis(combined_graph, lsh_count, lsh_size, settings, true_matche
     embedding_results_gen_deepgraphinfomax = hyperparameter_tuning.embeddings_hyperparameter_deepgraphinfomax_gen(
         combined_graph, hyperparameter_tuning.get_default_params_deepgraphinfomax())
     embedding_results_gen_graphwave = hyperparameter_tuning.embeddings_hyperparameter_graphwave_gen(
-        get_graph_for_original_graphwave(combined_graph, settings), hyperparameter_tuning.get_default_params_graphwave())
+        get_graph_for_original_graphwave(combined_graph, settings), hyperparameter_tuning.get_default_params_graphwave(settings.graphwave_libpath))
     #for embedding_results in chain(embedding_results_gen_graphsage, embedding_results_gen_deepgraphinfomax):
     for embedding_results in chain(embedding_results_gen_graphwave, embedding_results_gen_deepgraphinfomax, embedding_results_gen_graphsage):
         embedding_results = embedding_results.filter(embeddings_features.nodes)

@@ -10,6 +10,7 @@ class Settings:
             self.fast_mode = bool(parser.fast_mode)
             self.graph_path = parser.graph_path
         else:
+            self.graphwave_libpath = parser.graphwave_libpath
             self.pickle_file = parser.pickle_file
 
         self.results_path = parser.results_path

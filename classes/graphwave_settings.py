@@ -1,6 +1,7 @@
 class Graphwave_settings():
 
-    def __init__(self, scales, sample_p_max_val, no_samples, degree):
+    def __init__(self, graphwave_libpath, scales, sample_p_max_val, no_samples, degree):
+        self.graphwave_libpath = graphwave_libpath
         self.scales = scales
         self.sample_p_max_val = sample_p_max_val
         self.no_samples = no_samples

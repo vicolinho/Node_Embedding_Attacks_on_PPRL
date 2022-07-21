@@ -127,7 +127,7 @@ def generate_node_embeddings_graphwave_sg(G, graphwave_settings):
 
 def generate_node_embeddings_graphwave(G, graphwave_settings):
     import sys
-    sys.path.insert(0, "C:\\Users\\Tim\\PycharmProjects\\graphwave-python3\\graphwave")
+    sys.path.insert(0, graphwave_settings.graphwave_libpath)
     import graphwave
     sample_points = np.linspace(
         0, graphwave_settings.sample_p_max_val, graphwave_settings.no_samples

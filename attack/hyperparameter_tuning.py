@@ -49,13 +49,13 @@ def embeddings_hyperparameter_graphwave_gen(G, graphwave_settings_list):
     for graphwave_settings in graphwave_settings_list:
         yield embeddings.generate_node_embeddings_graphwave(G, graphwave_settings)
 
-def get_default_params_graphwave():
+def get_default_params_graphwave(graphwave_lib_path):
     graphwave_settings_list = []
     degree_list = config.graphwave_settings[config.DEGREE_LIST]
     for i in range(0, len(degree_list)):
         sample_pct = config.graphwave_settings[config.SAMPLE_PCT_LIST][i]
         scales = config.graphwave_settings[config.SCALES_LIST][i]
-        graphwave_settings = Graphwave_settings(
+        graphwave_settings = Graphwave_settings(graphwave_libpath=graphwave_lib_path,
             scales=scales, sample_p_max_val=sample_pct[1], no_samples=sample_pct[2], degree=degree_list[i]
         )
         graphwave_settings_list.append(graphwave_settings)
