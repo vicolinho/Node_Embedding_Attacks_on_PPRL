@@ -132,7 +132,11 @@ def generate_node_embeddings_graphwave(G, graphwave_settings):
     sample_points = np.linspace(
         0, graphwave_settings.sample_p_max_val, graphwave_settings.no_samples
     )
-    chi, heat_print, taus = graphwave.graphwave_alg(G, sample_points)
+    if graphwave_settings.scales == ['auto']:
+        chi, heat_print, taus = graphwave.graphwave_alg(G, sample_points)
+        graphwave_settings.scales = taus
+    else:
+        chi, heat_print, taus = graphwave.graphwave_alg(G, sample_points, taus=graphwave_settings.scales)
 
     node_ids = list(G)
     embeddings = chi

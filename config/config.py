@@ -20,6 +20,5 @@ deepgraphinfomax_settings = {
 
 graphwave_settings = {
     SAMPLE_PCT_LIST: [(0,100,50), (0,50,25), (0,100,50), (0,50,25)],
-    SCALES_LIST: 4 * [[5,10]],
-    DEGREE_LIST: [20,20,30,30]
+    SCALES_LIST: 2 * [['auto']] + 2 * [[5,10]]
 }
