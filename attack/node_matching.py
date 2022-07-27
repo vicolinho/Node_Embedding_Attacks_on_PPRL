@@ -8,7 +8,7 @@ from queue import PriorityQueue
 
 from stellargraph.globalvar import SOURCE, TARGET, WEIGHT
 
-from attack import blocking
+from attack import blocking, embeddings
 
 U = 'u'
 V = 'v'
@@ -28,7 +28,6 @@ def bipartite_graph_edges_to_matches_mwm(G_edges, nodes1, nodes2, no_top_pairs):
     u = [n for n in G.nodes if n[0] == U]
     try:
         matches = nx.bipartite.minimum_weight_full_matching(G, u)
-        #todo: two other methods
     except ValueError:
         return []
     for node1, node2 in matches.items():
@@ -72,27 +71,33 @@ def add_id_to_lsh_dict(i, j, ids_hamming_lsh, lsh_dict, lsh_emb):
         lsh_dict[bitvector] = [OrderedSet(), OrderedSet()]
     lsh_dict[bitvector][j].add(i)
 
-def embeddings_to_bipartite_graph_edges_lsh(embeddings1, embeddings2, settings):
-    binary_lsh1, binary_lsh2 = embeddings_to_binary_lsh(embeddings1, embeddings2, settings.hyperplane_count)
+def embeddings_to_bipartite_graph_edges_lsh(embeddings1, embeddings2, settings, weights):
+    embeddings1_lsh = embeddings.multiple_embeddings_to_one(embeddings1)
+    embeddings2_lsh = embeddings.multiple_embeddings_to_one(embeddings2)
+    binary_lsh1, binary_lsh2 = embeddings_to_binary_lsh(embeddings1_lsh, embeddings2_lsh, settings.hyperplane_count)
     ids_list_hamming_lsh = blocking.choose_positions(settings.lsh_count, settings.lsh_size, settings.hyperplane_count)
     lsh_dicts_embeddings = create_dicts_lsh_embeddings(binary_lsh1, binary_lsh2, ids_list_hamming_lsh)
-    return embeddings_to_bipartite_graph_edges_lsh_dicts(embeddings1, embeddings2, lsh_dicts_embeddings, settings.cos_sim_thold)
+    return embeddings_to_bipartite_graph_edges_lsh_dicts(embeddings1, embeddings2, lsh_dicts_embeddings, settings.cos_sim_thold, weights = weights)
 
 
 
-def embeddings_to_bipartite_graph_edges_lsh_dicts(embeddings1, embeddings2, lsh_dicts_embeddings, threshold, vidange = True):
+def embeddings_to_bipartite_graph_edges_lsh_dicts(embeddings1, embeddings2, lsh_dicts_embeddings, threshold, vidange = True, weights = [1.0]):
     # lsh_dicts_embeddings: list of dicts (key for comparison)
     # [{bitvector: [[u_ids,],[v_ids,]]}, ...]
     source, target, weight = [], [], []
     for lsh_dict_embeddings in lsh_dicts_embeddings:
         for value in lsh_dict_embeddings.values():
-            temp_embeddings1 = [embeddings1[i] for i in value[0]]
-            temp_embeddings2 = [embeddings2[i] for i in value[1]]
-            if len(temp_embeddings1) == 0 or len(temp_embeddings2) == 0:
-                continue
-            cos_sims = cosine_similarity(temp_embeddings1, temp_embeddings2)
-            for x in range(0, len(temp_embeddings1)):
-                for y in range(0, len(temp_embeddings2)):
+            cos_sims_list = []
+            for j in range(0, len(embeddings1)):
+                temp_embeddings1 = [embeddings1[j][i] for i in value[0]]
+                temp_embeddings2 = [embeddings2[j][i] for i in value[1]]
+                if len(temp_embeddings1) == 0 or len(temp_embeddings2) == 0:
+                    continue
+                cos_sims = cosine_similarity(temp_embeddings1, temp_embeddings2)
+                cos_sims_list.append(cos_sims)
+            cos_sims = weighted_cos_sim(cos_sims_list, weights)
+            for x in range(0, len(cos_sims)):
+                for y in range(0, len(cos_sims[x])):
                     sim = cos_sims[x, y]
                     if sim >= threshold:
                         source.append(U + str(value[0][x]))
@@ -102,6 +107,12 @@ def embeddings_to_bipartite_graph_edges_lsh_dicts(embeddings1, embeddings2, lsh_
     if vidange:
         edges = transform_edges_df_to_vidange(edges, w_cos = 0.6, w_sim_conf = 0.3, w_degr_conf = 0.1)
     return edges
+
+def weighted_cos_sim(cos_sims_list, weights):
+    cos_sim = weights[0] * cos_sims_list[0]
+    for i in range(1, len(cos_sims_list)):
+        cos_sim += weights[i] * cos_sims_list[i]
+    return cos_sim
 
 def bipartite_graph_edges_to_matches_shm(edges, nodes1, nodes2, no_top_pairs):
     edge_source_min = edges.loc[edges.groupby([SOURCE])[WEIGHT].idxmin()].reset_index(drop=True)
@@ -225,30 +236,35 @@ def normalize_weights_vidange(w_cos, w_degr_conf, w_sim_conf):
     return w_cos, w_sim_conf, w_degr_conf
 
 
-def matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, settings, prefix_char=False):
-    matches = bipartite_graph_edges_to_matches(embeddings_to_bipartite_graph_edges_lsh(embeddings1, embeddings2, settings), nodes1, nodes2, max(settings.num_top_pairs), settings.graph_matching_tech)
+def matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, settings, weights, prefix_char=False):
+    matches = bipartite_graph_edges_to_matches(embeddings_to_bipartite_graph_edges_lsh(embeddings1, embeddings2, settings, weights), nodes1, nodes2, max(settings.num_top_pairs), settings.graph_matching_tech)
     if prefix_char:
         return remove_prefix_from_matches(matches)
     else:
         return matches
 
-def matches_from_embeddings_combined_graph(embedding_results, id1, id2, settings):
+def matches_from_embeddings_combined_graph(embedding_results, id1, id2, settings, weights = [1.0]):
     embeddings1, embeddings2, nodes1, nodes2 = split_embeddings_by_nodes(embedding_results.embeddings, embedding_results.nodes, id1, id2)
-    return matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, settings, True)
+    return matches_from_embeddings_two_graphs(embeddings1, embeddings2, nodes1, nodes2, settings, weights, True)
 
 
 def split_embeddings_by_nodes(embeddings, nodes, prefix1, prefix2):
     embeddings1 = []
     embeddings2 = []
+    for i in range(0, len(embeddings)):
+        embeddings1.append([])
+        embeddings2.append([])
     nodes1 = []
     nodes2 = []
     for i in range(0, len(nodes)):
         if nodes[i][0] == prefix1:
             nodes1.append(nodes[i])
-            embeddings1.append(embeddings[i])
+            for j in range(0, len(embeddings)):
+                embeddings1[j].append(embeddings[j][i])
         elif nodes[i][0] == prefix2:
             nodes2.append(nodes[i])
-            embeddings2.append(embeddings[i])
+            for j in range(0, len(embeddings)):
+                embeddings2[j].append(embeddings[j][i])
     return embeddings1, embeddings2, nodes1, nodes2
 
 

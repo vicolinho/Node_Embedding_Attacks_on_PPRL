@@ -203,6 +203,16 @@ def combine_embeddings(embeddings_list, node_ids_list):
         node_ids.append(key)
     return embeddings, node_ids
 
+def multiple_embeddings_to_one(embeddings_):
+    """helper function: when analysing combination of embeddings you have to distinguish between both kinds
+    to calculate weighted distances BUT for LSH you need concatenated embeddings"""
+
+    if len(embeddings_) != 1:
+        embeddings = np.concatenate((embeddings_[0], embeddings_[1]), axis=1)
+        return embeddings
+    else:
+        return embeddings_[0]
+
 def create_learning_G_from_true_matches_graphsage(G, true_matches):
     true_matches = [("u_"+t[0], "v_"+t[1]) for t in true_matches]
     learning_graph = G.copy() # keeping node attributes

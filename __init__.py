@@ -47,7 +47,7 @@ def main():
 
 def calc_emb_analysis(combined_graph, lsh_count, lsh_size, settings, true_matches):
     embeddings_features = embeddings.just_features_embeddings(combined_graph, settings)
-    matches_precision_output(embeddings_features, lsh_size, lsh_count, settings, true_matches)
+    matches_precision_output(embeddings_features, settings, true_matches)
     embedding_results_gen_graphsage = hyperparameter_tuning.embeddings_hyperparameter_graphsage_gen(combined_graph,
                                                                                                  hyperparameter_tuning.get_default_params_graphsage())
     embedding_results_gen_deepgraphinfomax = hyperparameter_tuning.embeddings_hyperparameter_deepgraphinfomax_gen(
@@ -57,9 +57,11 @@ def calc_emb_analysis(combined_graph, lsh_count, lsh_size, settings, true_matche
     #for embedding_results in chain(embedding_results_gen_graphsage, embedding_results_gen_deepgraphinfomax):
     for embedding_results in chain(embedding_results_gen_graphwave, embedding_results_gen_deepgraphinfomax, embedding_results_gen_graphsage):
         embedding_results = embedding_results.filter(embeddings_features.nodes)
-        matches_precision_output(embedding_results, lsh_size, lsh_count, settings, true_matches)
-        merged_embeddings_results = embeddings_features.merge(embedding_results)
-        matches_precision_output(merged_embeddings_results, lsh_size, lsh_count, settings, true_matches)
+        matches_precision_output(embedding_results, settings, true_matches)
+        weights = [[i / 10, 1 - i / 10] for i in range(1,10)]
+        for weight_selection in weights:
+            merged_embeddings_results = embeddings_features.merge(embedding_results, weight1=weight_selection[0], weight2=weight_selection[1])
+            matches_precision_output(merged_embeddings_results, settings, true_matches, weights=weight_selection)
 
 def get_graph_for_original_graphwave(graph, settings):
     if inout.graphwave_graph_exists(settings):
@@ -92,15 +94,15 @@ def generate_graph(lsh_count, lsh_size, parser, record_count, removed_plain_reco
     return combined_graph, true_matches
 
 
-def matches_precision_output(merged_embeddings_results, lsh_size, lsh_count, settings, true_matches):
-    matches = node_matching.matches_from_embeddings_combined_graph(merged_embeddings_results, 'u', 'v', settings)
+def matches_precision_output(embeddings_results, settings, true_matches, weights = [1.0]):
+    matches = node_matching.matches_from_embeddings_combined_graph(embeddings_results, 'u', 'v', settings, weights)
     precision_list = []
     for top_pairs in settings.num_top_pairs:
         sub_matches = matches[:top_pairs]
         precision = evaluation.evalaute_top_pairs(sub_matches, true_matches)
         precision_list.append(precision)
-        print(merged_embeddings_results.info_string, top_pairs, precision)
-    attack.inout.output_result(merged_embeddings_results.info_string, precision_list, settings)
+        print(embeddings_results.info_string(), top_pairs, precision)
+    attack.inout.output_result(embeddings_results.info_string(), precision_list, settings)
 
 
 def print_precision_combined_embeddings(list_ids, embedding_func_names, embeddings_comb, node_ids_comb, results_path, record_count,
