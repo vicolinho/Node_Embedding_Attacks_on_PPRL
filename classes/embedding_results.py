@@ -3,13 +3,14 @@ import pandas as pd
 
 
 class Embedding_results:
-    def __init__(self, embeddings, nodes, info_string_prefix):
+    def __init__(self, embeddings, nodes, info_string_prefix, algo_settings = None):
         if len(embeddings) > 5:
             self.embeddings = [embeddings]
         else:
             self.embeddings = embeddings
         self.nodes = nodes
         self.info_string_prefix = info_string_prefix
+        self.algo_settings = algo_settings
         self.weights = []
 
     def merge(self, other, weight1, weight2):
@@ -24,7 +25,14 @@ class Embedding_results:
             embeddings[0].append(value[0])
             embeddings[1].append(value[1])
             node_ids.append(key)
-        merged = Embedding_results(embeddings, node_ids, self.info_string() + " + " + other.info_string())
+        if self.algo_settings == None:
+            new_algo_settings = other.algo_settings
+        elif other.algo_settings == None:
+            new_algo_settings = self.algo_settings
+        else:
+            new_algo_settings = [self.algo_settings, other.algo_settings]
+        merged = Embedding_results(embeddings, node_ids, self.info_string() + " + " + other.info_string(),
+                                  new_algo_settings)
         merged.set_weights(weight1, weight2)
         return merged
 
@@ -37,7 +45,7 @@ class Embedding_results:
     def filter(self, index):
         df = pd.DataFrame(data=self.embeddings[0], index=self.nodes)
         df = df.loc[index]
-        return Embedding_results(df.to_numpy(), df.index, self.info_string())
+        return Embedding_results(df.to_numpy(), df.index, self.info_string(), self.algo_settings)
 
     def info_string(self):
         if len(self.weights) == 0:

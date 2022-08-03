@@ -24,6 +24,11 @@ from attack import inout
 from classes.embedding_results import Embedding_results
 
 
+FEATURES = 'Features'
+GRAPHSAGE = 'GraphSAGE'
+GRAPHWAVE = 'GraphWave'
+DEEPGRAPHINFOMAX = 'DeepGraphInfomax'
+
 def generate_node_embeddings_node2vec(graph): # not useful only includes node ids not structures or similarities
     # https://stellargraph.readthedocs.io/en/stable/demos/embeddings/node2vec-embeddings.html
     rw = BiasedRandomWalk(graph)
@@ -103,7 +108,7 @@ def generate_node_embeddings_graphsage(G, graphsage_settings, learning_G = None)
     node_gen = GraphSAGENodeGenerator(G, batch_size, num_samples).flow(nodes)
     node_embeddings = embedding_model.predict(node_gen, workers=4, verbose=1)
 
-    return Embedding_results(node_embeddings, nodes, str(graphsage_settings))
+    return Embedding_results(node_embeddings, nodes, str(graphsage_settings), graphsage_settings)
 
 
 def generate_node_embeddings_graphwave_sg(G, graphwave_settings):
@@ -122,7 +127,7 @@ def generate_node_embeddings_graphwave_sg(G, graphwave_settings):
     embeddings = [x.numpy() for x in embeddings_dataset]
     embeddings = np.reshape(embeddings, (len(embeddings), len(embeddings[0][0])))
     embeddings_transformed = normalize_embeddings(embeddings)
-    return Embedding_results(embeddings_transformed, node_ids, str(graphwave_settings))
+    return Embedding_results(embeddings_transformed, node_ids, str(graphwave_settings), graphwave_settings)
 
 
 def generate_node_embeddings_graphwave(G, graphwave_settings):
@@ -141,7 +146,7 @@ def generate_node_embeddings_graphwave(G, graphwave_settings):
     node_ids = list(G)
     embeddings = chi
     embeddings_transformed = normalize_embeddings(embeddings)
-    return Embedding_results(embeddings_transformed, node_ids, str(graphwave_settings))
+    return Embedding_results(embeddings_transformed, node_ids, str(graphwave_settings), graphwave_settings)
 
 
 def normalize_embeddings(embeddings):
@@ -177,7 +182,7 @@ def generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings):
     node_gen = fullbatch_generator.flow(node_subjects)
     embeddings = emb_model.predict(node_gen)
     embeddings = normalize_embeddings(embeddings)
-    return Embedding_results(embeddings, node_subjects, str(deepgraphinfomax_settings))
+    return Embedding_results(embeddings, node_subjects, str(deepgraphinfomax_settings), deepgraphinfomax_settings)
 
 
 def generate_node_embeddings_gcn(G):

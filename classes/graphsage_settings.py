@@ -1,3 +1,6 @@
+from attack import embeddings
+
+
 class Graphsage_settings():
 
     def __init__(self, layers=None, num_samples=None, number_of_walks = 1, length = 5, batch_size = 50, epochs = 10):
@@ -11,6 +14,7 @@ class Graphsage_settings():
         self.batch_size = batch_size
         self.epochs = epochs
         self.num_samples = num_samples
+        self.technique = embeddings.GRAPHSAGE
 
     def __str__(self):
         return "{0} (lay: {1}, |Samples|: {2}, |W|: {3}, W_len: {4}, |B|: {5}, Eps: {6})"\

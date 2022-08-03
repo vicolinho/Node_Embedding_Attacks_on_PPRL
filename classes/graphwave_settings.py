@@ -1,3 +1,6 @@
+from attack import embeddings
+
+
 class Graphwave_settings():
 
     def __init__(self, graphwave_libpath, scales, sample_p_max_val, no_samples):
@@ -5,6 +8,7 @@ class Graphwave_settings():
         self.scales = scales
         self.sample_p_max_val = sample_p_max_val
         self.no_samples = no_samples
+        self.technique = embeddings.GRAPHWAVE
 
     def __str__(self):
         return "{0} {1} (0,{2},{3})".format(
