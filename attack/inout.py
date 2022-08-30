@@ -25,17 +25,18 @@ def get_filename_template(settings):
         histo_suffix = '_histo' if settings.histo_features else ''
         fast_suffix = '_fast' if settings.fast_mode else ''
         if settings.lsh_size == 0:
-            filename = "c{0}_t{1}_r{2}{3}{4}".format(settings.record_count, settings.threshold,
-                                                  settings.removed_plain_record_frac, histo_suffix, fast_suffix)
+            filename = "c{0}_t{1}_r{2}e{3}{4}{5}".format(settings.record_count, settings.threshold,
+                                                  settings.removed_plain_record_frac,
+                                                settings.removed_encoded_record_frac, histo_suffix, fast_suffix)
         else:
-            filename = "c{0}_t{1}_r{2}_lshc{3}_lshs{4}{5}{6}".format(settings.record_count, settings.threshold,
+            filename = "c{0}_t{1}_r{2}e{3}_lshc{4}_lshs{5}{6}{7}".format(settings.record_count, settings.threshold,
                                                                   settings.removed_plain_record_frac,
+                                                                  settings.removed_encoded_record_frac,
                                                                   settings.lsh_count,
                                                                   settings.lsh_size, histo_suffix, fast_suffix)
     else:
         filename = settings.pickle_file.split("/")[-1].split(".pkl")[0]
     return filename
-
 
 def output_result(technique, prec, settings):#, output_path, record_count, threshold, removed_frac, histo_features, lsh_count, lsh_size):
     csv_header = "technique,prec,settings\n"
@@ -106,12 +107,12 @@ def output_results_csv_common(no_matches, prec, settings, filename):
         df = pd.DataFrame()
     common_attr = (
     settings.pickle_file, graph_path.split('/')[-2], graphfile_attr.record_count, graphfile_attr.threshold,
-    graphfile_attr.removed_records, graphfile_attr.mode, *prec, no_matches, settings.graph_matching_tech,
-    settings.lsh_count, settings.lsh_size, settings.cos_sim_thold, settings.hyperplane_count)
+    graphfile_attr.removed_records_plain, graphfile_attr.removed_records_encoded, graphfile_attr.mode, *prec, no_matches, settings.graph_matching_tech,
+    settings.lsh_count, settings.lsh_size, settings.cos_sim_thold, settings.hyperplane_count, settings.min_edges)
     num_top_pairs_str = list(map(lambda i: str(i), settings.num_top_pairs))
-    common_attr_names = ['file', 'dataset', 'record_count', 'threshold', 'removed_records', 'node_features',
+    common_attr_names = ['file', 'dataset', 'record_count', 'threshold', 'removed_records_plain', 'removed_records_encoded', 'node_features',
                          *num_top_pairs_str, 'no_matches', 'graph_matching_tech', 'lsh_count', 'lsh_size',
-                         'cos_sim_threshold', 'hyperplane_count']
+                         'cos_sim_threshold', 'hyperplane_count', 'min_edges']
     return common_attr, common_attr_names, df, full_path
 
 

@@ -109,10 +109,14 @@ def embeddings_to_bipartite_graph_edges_lsh_dicts(embeddings1, embeddings2, lsh_
     return edges
 
 def weighted_cos_sim(cos_sims_list, weights):
-    if len(cos_sims_list) == 0:
+    try:
+        if len(cos_sims_list) == 0:
+            return []
+        else:
+            cos_sim = weights[0] * cos_sims_list[0]
+    except IndexError:
+        print("IndexError", cos_sims_list)
         return []
-    else:
-        cos_sim = weights[0] * cos_sims_list[0]
     for i in range(1, len(cos_sims_list)):
         cos_sim += weights[i] * cos_sims_list[i]
     return cos_sim

@@ -30,22 +30,16 @@ def main():
     parser = argparser()
     settings = Settings(parser)
     print(settings.__dict__)
-    lsh_count = int(parser.lsh_count)
-    lsh_size = int(parser.lsh_size)
     if settings.mode == "graph_calc":
-        removed_plain_record_frac = float(parser.remove_frac_plain)
-        record_count = int(parser.record_count)
-        threshold = float(parser.threshold)
-        combined_graph, true_matches = generate_graph(lsh_count, lsh_size, parser, record_count, removed_plain_record_frac,
-                                                  settings, threshold)
+        combined_graph, true_matches = generate_graph(settings)
         if not settings.analysis:
             return
     else:
         combined_graph, true_matches = attack.inout.load_graph_tp(graph_path=settings.pickle_file)
-    calc_emb_analysis(combined_graph, lsh_count, lsh_size, settings, true_matches)
+    calc_emb_analysis(combined_graph, settings, true_matches)
 
 
-def calc_emb_analysis(combined_graph, lsh_count, lsh_size, settings, true_matches):
+def calc_emb_analysis(combined_graph, settings, true_matches):
     embeddings_features = embeddings.just_features_embeddings(combined_graph, settings)
     matches_precision_output(embeddings_features, settings, true_matches, technique=embeddings.FEATURES)
     embedding_results_gen_graphsage = hyperparameter_tuning.embeddings_hyperparameter_graphsage_gen(combined_graph,
@@ -71,18 +65,19 @@ def get_graph_for_original_graphwave(graph, settings):
         inout.save_graph_for_graphwave_org(G, settings)
     return G
 
-def generate_graph(lsh_count, lsh_size, parser, record_count, removed_plain_record_frac, settings, threshold):
-    plain_data = import_data.import_data_plain(parser.plain_file, record_count, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES,
-                                               ENCODED_ATTR)
-    encoded_data = import_data.import_data_encoded(parser.encoded_file, record_count, ENCODED_ATTR)
+def generate_graph(settings):
+    plain_data = import_data.import_data_plain(settings.plain_file, settings.record_count, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES,
+                                               ENCODED_ATTR, settings.padding)
+    encoded_data = import_data.import_data_encoded(settings.encoded_file, settings.record_count, ENCODED_ATTR)
     true_matches = import_data.get_true_matches(plain_data[QGRAMS], encoded_data[ENCODED_ATTR])  # normal mode
     # true_matches = import_data.get_true_matches(plain_data[ENCODED_ATTR], encoded_data[ENCODED_ATTR]) # normal mode
-    plain_data = plain_data.sample(frac=1 - removed_plain_record_frac)
-    nodes_plain, edges_plain = create_sim_graph_plain(plain_data, ENCODED_ATTR, threshold, BF_LENGTH, lsh_count,
-                                                      lsh_size, num_of_hash_func=15, id='u')  # normal
+    plain_data = plain_data.sample(frac=1 - settings.removed_plain_record_frac)
+    encoded_data = encoded_data.sample(frac= 1 - settings.removed_encoded_record_frac)
+    nodes_plain, edges_plain = create_sim_graph_plain(plain_data, ENCODED_ATTR, settings.threshold, BF_LENGTH, settings.lsh_count,
+                                                      settings.lsh_size, num_of_hash_func=15, id='u')  # normal
     # nodes_plain, edges_plain = create_sim_graph_encoded(plain_data, ENCODED_ATTR, BF_LENGTH, lsh_count = 1, lsh_size = 0, num_of_hash_func=15, threshold = threshold, id = 'u')
-    nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, lsh_count, lsh_size,
-                                                            num_of_hash_func=15, threshold=threshold, id='v')
+    nodes_encoded, edges_encoded = create_sim_graph_encoded(encoded_data, ENCODED_ATTR, BF_LENGTH, settings.lsh_count, settings.lsh_size,
+                                                            num_of_hash_func=15, threshold=settings.threshold, id='v')
     max_degree = max(len(nodes_plain), len(nodes_encoded)) - 1
     graph_plain = sim_graph.create_graph(nodes_plain, edges_plain, min_nodes=3, max_degree=max_degree,
                                          settings=settings)

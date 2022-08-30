@@ -42,19 +42,22 @@ def preprocess_encoded_df(df, encoded_attr):
     return df
 
 
-def preprocess_plain_df(df, lst_qgram_attr, lst_blocking_attr, encoded_attr):
+def preprocess_plain_df(df, lst_qgram_attr, lst_blocking_attr, encoded_attr, padding):
     duplicates_subset = lst_qgram_attr + lst_blocking_attr
     df = df.drop_duplicates(subset=duplicates_subset)
-    df = add_qgrams_as_key(df, lst_qgram_attr)
+    df = add_qgrams_as_key(df, lst_qgram_attr, padding)
     df = add_bf_as_key(df, encoded_attr)
     return df
 
 
-def add_qgrams_as_key(df, qgram_attributes):
+def add_qgrams_as_key(df, qgram_attributes, padding):
     cols = []
     for attribute in qgram_attributes:
         cols.append(df[attribute])
-    df[QGRAMS] = list(map(get_bigrams, *cols))
+    if padding:
+        df[QGRAMS] = list(map(get_bigrams_padding, *cols))
+    else:
+        df[QGRAMS] = list(map(get_bigrams, *cols))
     df = df.drop_duplicates(subset=QGRAMS)
     return df
 
@@ -67,6 +70,12 @@ def get_bigrams(*args):
     s = set()
     for arg in args:
         s = s | (set(ngrams(arg, 2)))
+    return frozenset(s)
+
+def get_bigrams_padding(*args):
+    s = set()
+    for arg in args:
+        s = s | (set(ngrams(arg, 2, pad_left=True, pad_right=True, left_pad_symbol='_', right_pad_symbol='_')))
     return frozenset(s)
 
 

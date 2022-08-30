@@ -13,6 +13,7 @@ def argparser():
     parser_full.add_argument("threshold", help='similarity threshold to be included in graph')
     parser_full.add_argument("--graph_path", help='path where graph is to be stored', default='graphs')
     parser_full.add_argument("--remove_frac_plain", help='fraction of plain records to be excluded')
+    parser_full.add_argument("--remove_frac_encoded", help='fraction of encoded records to be excluded')
     parser_full.add_argument("--record_count", help='restrict record count to be processed')
     parser_full.add_argument("--histo_features", help='adds histograms as features', action='store_true')
     parser_full.add_argument("--fast_mode", help='fast mode without time-consuming node features', action='store_true')
