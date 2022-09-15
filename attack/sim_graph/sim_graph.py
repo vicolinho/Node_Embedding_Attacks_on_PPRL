@@ -1,7 +1,7 @@
 import networkx as nx
 from stellargraph import StellarGraph
 
-from attack import node_features
+from attack.features import node_features
 
 STELLAR_GRAPH = 'stellargraph'
 

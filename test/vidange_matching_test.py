@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from attack.node_matching import cos_sim_matrix_to_edges_vidange
+from attack.node_matching_.node_matching import cos_sim_matrix_to_edges_vidange
 
 
 class MyTestCase(unittest.TestCase):

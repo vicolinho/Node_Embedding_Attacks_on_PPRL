@@ -6,8 +6,8 @@ import pandas as pd
 from networkx import ego_graph, betweenness_centrality, degree_centrality
 from collections import Counter
 
-from attack import sim_graph
-from attack.adjust_sims import compute_number_of_qgrams
+from attack.sim_graph import sim_graph
+from attack.sim_graph.adjust_sims import compute_number_of_qgrams
 
 
 def qgram_count_plain(series_qgrams, id):

@@ -4,10 +4,10 @@ from itertools import combinations
 from pandas import DataFrame
 from stellargraph.globalvar import SOURCE, TARGET, WEIGHT
 
-from attack.preprocessing import QGRAMS
-from attack import sim_graph
-from attack.preprocessing import BITARRAY
-from attack.adjust_sims import compute_real_dice_from_bits
+from attack.preprocessing.preprocessing import QGRAMS
+from attack.sim_graph import sim_graph
+from attack.preprocessing.preprocessing import BITARRAY
+from attack.sim_graph.adjust_sims import compute_real_dice_from_bits
 
 
 def edges_df_from_blk_plain(blk_dict, qgram_attributes, threshold, id):

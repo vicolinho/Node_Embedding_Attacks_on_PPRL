@@ -1,26 +1,19 @@
 import networkx as nx
 import numpy as np
 import pandas as pd
-import stellargraph.core.convert
 import tensorflow as tf
 from gensim.models import Word2Vec
-from sklearn import model_selection
-from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 from stellargraph import StellarGraph
 from stellargraph.data import BiasedRandomWalk, UnsupervisedSampler
-from stellargraph.datasets import datasets
 from stellargraph.layer import GraphSAGE, link_classification, GCN, DeepGraphInfomax
 from stellargraph.mapper import GraphSAGELinkGenerator, GraphSAGENodeGenerator, GraphWaveGenerator, \
     FullBatchNodeGenerator, CorruptedGenerator
 from stellargraph.utils import plot_history
 from tensorflow import keras
 from tensorflow.python.keras.callbacks import EarlyStopping
-from tensorflow.python.keras.models import Model
 #from tensorflow.keras import Model
-from tensorflow.python.keras.optimizer_v2.adam import Adam
 
-from attack import inout
 from classes.embedding_results import Embedding_results
 
 

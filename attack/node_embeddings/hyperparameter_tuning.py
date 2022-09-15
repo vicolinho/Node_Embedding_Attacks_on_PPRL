@@ -1,4 +1,4 @@
-from attack import embeddings
+from attack.node_embeddings import embeddings
 from classes.deepgraphinfomax_settings import Deepgraphinfomax_settings
 from classes.graphsage_settings import Graphsage_settings
 import config.config as config

@@ -8,7 +8,8 @@ from queue import PriorityQueue
 
 from stellargraph.globalvar import SOURCE, TARGET, WEIGHT
 
-from attack import blocking, embeddings
+from attack.blocking import blocking
+from attack.node_embeddings import embeddings
 
 U = 'u'
 V = 'v'
@@ -122,6 +123,8 @@ def weighted_cos_sim(cos_sims_list, weights):
     return cos_sim
 
 def bipartite_graph_edges_to_matches_shm(edges, nodes1, nodes2, no_top_pairs):
+    if len(edges) == 0:
+        return []
     edge_source_min = edges.loc[edges.groupby([SOURCE])[WEIGHT].idxmin()].reset_index(drop=True)
     edge_target_min = edges.loc[edges.groupby([TARGET])[WEIGHT].idxmin()].reset_index(drop=True)
     shm_edges = pd.merge(edge_source_min, edge_target_min, how='inner', on=edge_source_min.columns.values.tolist())

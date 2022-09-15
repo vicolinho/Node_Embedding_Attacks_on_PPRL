@@ -3,9 +3,13 @@ from stellargraph import StellarGraph
 from stellargraph.datasets import datasets
 
 import embeddings
-from attack import import_data, ENCODED_ATTR, \
-    create_sim_graph_encoded, BF_LENGTH, sim_graph, node_matching, evaluation, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, \
-    create_sim_graph_plain, blocking, embeddings, visualization
+from attack import ENCODED_ATTR, \
+    create_sim_graph_encoded, BF_LENGTH, sim_graph, QGRAM_ATTRIBUTES, BLK_ATTRIBUTES, \
+    create_sim_graph_plain, blocking
+from attack.io_ import import_data
+from attack.evaluation_ import evaluation, visualization
+from attack.node_embeddings import embeddings
+from attack.node_matching_ import node_matching
 
 DATA_ENCODED_FILE = '../pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a_encoded_fn_ln.csv'
 DATA_PLAIN_FILE = '../pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a.csv'

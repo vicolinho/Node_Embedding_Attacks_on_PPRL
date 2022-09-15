@@ -4,7 +4,7 @@ import mmh3 as mmh3
 from bitarray import bitarray
 from pandas import DataFrame
 
-from attack.preprocessing import BITARRAY
+from attack.preprocessing.preprocessing import BITARRAY
 
 LSH_BLOCKING = 'lsh_blocking'
 BLOCKING = 'blocking'

@@ -1,4 +1,4 @@
-from attack import embeddings
+from attack.node_embeddings import embeddings
 
 
 class Graphsage_settings():

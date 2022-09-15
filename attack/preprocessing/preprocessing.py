@@ -8,6 +8,7 @@ from attack import blocking
 
 BITARRAY = 'bitarray'
 
+from attack.blocking import blocking
 
 def decode(base_string, length=1024):
     bf_array = bitarray(length, endian='little')

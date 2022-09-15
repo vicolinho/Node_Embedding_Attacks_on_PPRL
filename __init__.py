@@ -5,19 +5,23 @@ import numpy as np
 from pandas import DataFrame
 from stellargraph import StellarGraph
 
-import attack.inout
-from attack.argparser import argparser
-from attack import embeddings, inout, logs
-from attack import blocking, preprocessing, sim_graph, node_matching, node_features, import_data, evaluation, \
-    visualization
+import attack.io_.inout
+from attack.io_.argparser import argparser
+from attack.io_ import inout, logs, import_data
+from attack.blocking import blocking
+from attack.preprocessing import preprocessing
+from attack.sim_graph import sim_graph
+from attack.evaluation_ import evaluation
+from attack.features import node_features
+from attack.node_matching_ import node_matching
 
 import pandas as pd
 
-from attack import hyperparameter_tuning
+from attack.node_embeddings import hyperparameter_tuning, embeddings
 from classes.settings import Settings
-from attack.preprocessing import BITARRAY, get_bigrams, QGRAMS
-from attack.similarities import edges_df_from_blk_plain, edges_df_from_blk_bf_adjusted
-from attack.analysis import false_negative_rate, get_num_hash_function
+from attack.preprocessing.preprocessing import BITARRAY, get_bigrams, QGRAMS
+from attack.sim_graph.similarities import edges_df_from_blk_plain, edges_df_from_blk_bf_adjusted
+from attack.sim_graph.analysis import false_negative_rate, get_num_hash_function
 
 #DATA_PLAIN_FILE = "pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a.csv"
 #DATA_ENCODED_FILE = "pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a_encoded_fn_ln.csv"
@@ -35,7 +39,7 @@ def main():
         if not settings.analysis:
             return
     else:
-        combined_graph, true_matches = attack.inout.load_graph_tp(graph_path=settings.pickle_file)
+        combined_graph, true_matches = attack.io_.inout.load_graph_tp(graph_path=settings.pickle_file)
     calc_emb_analysis(combined_graph, settings, true_matches)
 
 
@@ -43,7 +47,7 @@ def calc_emb_analysis(combined_graph, settings, true_matches):
     embeddings_features = embeddings.just_features_embeddings(combined_graph, settings)
     matches_precision_output(embeddings_features, settings, true_matches, technique=embeddings.FEATURES)
     embedding_results_gen_graphsage = hyperparameter_tuning.embeddings_hyperparameter_graphsage_gen(combined_graph,
-                                                                                                 hyperparameter_tuning.get_default_params_graphsage())
+                                                                                                    hyperparameter_tuning.get_default_params_graphsage())
     embedding_results_gen_deepgraphinfomax = hyperparameter_tuning.embeddings_hyperparameter_deepgraphinfomax_gen(
         combined_graph, hyperparameter_tuning.get_default_params_deepgraphinfomax())
     embedding_results_gen_graphwave = hyperparameter_tuning.embeddings_hyperparameter_graphwave_gen(
