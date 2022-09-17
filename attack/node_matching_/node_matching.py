@@ -125,8 +125,11 @@ def weighted_cos_sim(cos_sims_list, weights):
 def bipartite_graph_edges_to_matches_shm(edges, nodes1, nodes2, no_top_pairs):
     if len(edges) == 0:
         return []
-    edge_source_min = edges.loc[edges.groupby([SOURCE])[WEIGHT].idxmin()].reset_index(drop=True)
-    edge_target_min = edges.loc[edges.groupby([TARGET])[WEIGHT].idxmin()].reset_index(drop=True)
+    try:
+        edge_source_min = edges.loc[edges.groupby([SOURCE])[WEIGHT].idxmin()].reset_index(drop=True)
+        edge_target_min = edges.loc[edges.groupby([TARGET])[WEIGHT].idxmin()].reset_index(drop=True)
+    except KeyError:
+        return []
     shm_edges = pd.merge(edge_source_min, edge_target_min, how='inner', on=edge_source_min.columns.values.tolist())
     shm_edges = shm_edges.sort_values(by=[WEIGHT]).head(no_top_pairs)
     id_mapping_func = lambda x, node_ids: node_ids[int(x[1:])]
