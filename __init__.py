@@ -56,7 +56,7 @@ def calc_emb_analysis(combined_graph, settings, true_matches):
     for embedding_results in chain(embedding_results_gen_graphwave, embedding_results_gen_deepgraphinfomax, embedding_results_gen_graphsage):
         embedding_results = embedding_results.filter(embeddings_features.nodes)
         matches_precision_output(embedding_results, settings, true_matches, embedding_results.algo_settings.technique)
-        weights = [[i / 10, 1 - i / 10] for i in range(1,10)]
+        weights = settings.weights
         for weight_selection in weights:
             merged_embeddings_results = embeddings_features.merge(embedding_results, weight1=weight_selection[0], weight2=weight_selection[1])
             matches_precision_output(merged_embeddings_results, settings, true_matches, embedding_results.algo_settings.technique, weights=weight_selection)

@@ -27,3 +27,4 @@ class Settings:
         self.vidange_sim = bool(True)
         self.graph_matching_tech = parser.graph_matching_tech
         self.min_edges = int(parser.min_edges)
+        self.weights = [[w, 1 - w] for w in parser.weight_list]
