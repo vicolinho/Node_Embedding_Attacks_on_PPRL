@@ -1,3 +1,5 @@
+import importlib
+
 class Settings:
     def __init__(self, parser):
         self.mode = parser.mode
@@ -28,3 +30,4 @@ class Settings:
         self.graph_matching_tech = parser.graph_matching_tech
         self.min_edges = int(parser.min_edges)
         self.weights = [[w, 1 - w] for w in parser.weight_list]
+        self.hp_config = importlib.import_module("config." + parser.hp_config_file)

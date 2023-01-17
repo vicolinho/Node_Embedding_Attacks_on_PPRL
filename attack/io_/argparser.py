@@ -33,6 +33,7 @@ def argparser():
     default_weights = [i / 10 for i in range(1,10)]
     parser_save_graph.add_argument("--weight_list", help='list of weights to combine node features with node embeddings', nargs='*', type=float, default=default_weights)
     parser_save_graph.add_argument("--graphwave_libpath", help='path to original graphwave libpath')
+    parser_save_graph.add_argument("--hp_config_file", help='config file in config directory to import hyperparameters (without .py)', default='config')
     #parser_save_graph.add_argument("--graphsage_settings_file", help='path to graphsage settings file for hyperparameter tuning')
     #parser_save_graph.add_argument("--deepgraphinfomax_settings_file", help='path to deepgraphinfomax settings file for hyperparameter tuning')
     args = parser.parse_args()

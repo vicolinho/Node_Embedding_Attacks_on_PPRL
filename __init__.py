@@ -47,11 +47,11 @@ def calc_emb_analysis(combined_graph, settings, true_matches):
     embeddings_features = embeddings.just_features_embeddings(combined_graph, settings)
     matches_precision_output(embeddings_features, settings, true_matches, technique=embeddings.FEATURES)
     embedding_results_gen_graphsage = hyperparameter_tuning.embeddings_hyperparameter_graphsage_gen(combined_graph,
-                                                                                                    hyperparameter_tuning.get_default_params_graphsage())
+                                                                                                    hyperparameter_tuning.get_default_params_graphsage(settings.hp_config))
     embedding_results_gen_deepgraphinfomax = hyperparameter_tuning.embeddings_hyperparameter_deepgraphinfomax_gen(
-        combined_graph, hyperparameter_tuning.get_default_params_deepgraphinfomax())
+        combined_graph, hyperparameter_tuning.get_default_params_deepgraphinfomax(settings.hp_config))
     embedding_results_gen_graphwave = hyperparameter_tuning.embeddings_hyperparameter_graphwave_gen(
-        get_graph_for_original_graphwave(combined_graph, settings), hyperparameter_tuning.get_default_params_graphwave(settings.graphwave_libpath))
+        get_graph_for_original_graphwave(combined_graph, settings), hyperparameter_tuning.get_default_params_graphwave(settings.graphwave_libpath, settings.hp_config))
     #for embedding_results in chain(embedding_results_gen_graphsage, embedding_results_gen_deepgraphinfomax):
     for embedding_results in chain(embedding_results_gen_graphwave, embedding_results_gen_deepgraphinfomax, embedding_results_gen_graphsage):
         embedding_results = embedding_results.filter(embeddings_features.nodes)

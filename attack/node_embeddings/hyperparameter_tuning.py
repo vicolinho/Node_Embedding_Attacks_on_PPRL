@@ -1,9 +1,7 @@
 from attack.node_embeddings import embeddings
 from classes.deepgraphinfomax_settings import Deepgraphinfomax_settings
 from classes.graphsage_settings import Graphsage_settings
-import config.config as config
 from classes.graphwave_settings import Graphwave_settings
-
 
 def embeddings_hyperparameter_deepgraphinfomax(G, deepgraphinfomax_settings_list): # not in use because just combined with features which is better with generators but perhaps still needed
     embedding_results_list = []
@@ -16,7 +14,7 @@ def embeddings_hyperparameter_deepgraphinfomax_gen(G, deepgraphinfomax_settings_
     for deepgraphinfomax_settings in deepgraphinfomax_settings_list:
         yield embeddings.generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings)
 
-def get_default_params_deepgraphinfomax():
+def get_default_params_deepgraphinfomax(config):
     layer_structures_list = config.deepgraphinfomax_settings[config.LAYER_STRUCTURES_LIST]
     activation_func_list = config.deepgraphinfomax_settings[config.ACTIVATION_FUNC_LIST]
     deepgraphinfomax_settings_list = []
@@ -36,7 +34,7 @@ def embeddings_hyperparameter_graphsage_gen(G, graphsage_settings_list, learning
     for graphsage_settings in graphsage_settings_list:
         yield embeddings.generate_node_embeddings_graphsage(G, graphsage_settings, learning_G)
 
-def get_default_params_graphsage():
+def get_default_params_graphsage(config):
     layer_structures_list = config.graphsage_settings[config.LAYER_STRUCTURES_LIST]
     num_samples_list = config.graphsage_settings[config.NUM_SAMPLES_LIST]
     graphsage_settings_list = []
@@ -49,7 +47,7 @@ def embeddings_hyperparameter_graphwave_gen(G, graphwave_settings_list):
     for graphwave_settings in graphwave_settings_list:
         yield embeddings.generate_node_embeddings_graphwave(G, graphwave_settings)
 
-def get_default_params_graphwave(graphwave_lib_path):
+def get_default_params_graphwave(graphwave_lib_path, config):
     graphwave_settings_list = []
     sample_pct_list = config.graphwave_settings[config.SAMPLE_PCT_LIST]
     for i in range(0, len(sample_pct_list)):
