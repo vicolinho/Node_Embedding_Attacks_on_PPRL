@@ -17,6 +17,8 @@ class Settings:
         else:
             self.graphwave_libpath = parser.graphwave_libpath
             self.pickle_file = parser.pickle_file
+            self.weights = [[w, 1 - w] for w in parser.weight_list]
+            self.hp_config = importlib.import_module("config." + parser.hp_config_file)
 
         self.padding = bool(False)
         self.q_gram_length = int(2)
@@ -29,5 +31,3 @@ class Settings:
         self.vidange_sim = bool(True)
         self.graph_matching_tech = parser.graph_matching_tech
         self.min_edges = int(parser.min_edges)
-        self.weights = [[w, 1 - w] for w in parser.weight_list]
-        self.hp_config = importlib.import_module("config." + parser.hp_config_file)
