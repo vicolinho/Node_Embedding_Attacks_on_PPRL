@@ -1,5 +1,5 @@
 import pandas as pd
-from itertools import combinations, chain
+from itertools import combinations
 
 from pandas import DataFrame
 from stellargraph.globalvar import SOURCE, TARGET, WEIGHT
@@ -56,39 +56,6 @@ def edges_df_from_blk_element(df, threshold, node_attribute, sim_attribute, sim_
             arr_first.append(sim_graph.adjust_node_id(pair[0][0], id))
             arr_second.append(sim_graph.adjust_node_id(pair[1][0], id))
             arr_sims.append(sim)
-    d = {SOURCE: arr_first, TARGET: arr_second , WEIGHT: arr_sims}
-    return pd.DataFrame(d)
-
-def combinations_from_blk_dict(blk_dict, node_attribute, sim_attribute):
-    gen_combinations = iter(())
-    for key, value in blk_dict.items():
-        gen_combinations = chain(gen_combinations, combinations_from_blk_element(value, node_attribute, sim_attribute))
-    return gen_combinations
-
-def combinations_from_blk_element(df, node_attribute, sim_attribute):
-    if node_attribute == sim_attribute:
-        df = df.loc[:, [node_attribute]]
-    else:
-        df = df.loc[:, [node_attribute, sim_attribute]]
-    records = df.to_records(index=False)  # needed for using combinations function
-    pairs = combinations(records, 2)
-    return pairs
-
-def edges_df_from_combinations_records(pairs, threshold, node_attribute, sim_attribute, sim_func, id, **kwargs):
-    arr_first, arr_second, arr_sims = [], [], []
-    set_pairs = set()
-    for pair in pairs:
-        comb_record_id = " ".join(sorted([str(pair[0][0]), str(pair[1][0])]))
-        if not comb_record_id in set_pairs:
-            set_pairs.add(comb_record_id)
-            if node_attribute != sim_attribute:
-                sim = sim_func(pair[0][1], pair[1][1], **kwargs)
-            else:
-                sim = sim_func(pair[0][0], pair[1][0], **kwargs)
-            if sim >= threshold:
-                arr_first.append(sim_graph.adjust_node_id(pair[0][0], id))
-                arr_second.append(sim_graph.adjust_node_id(pair[1][0], id))
-                arr_sims.append(sim)
     d = {SOURCE: arr_first, TARGET: arr_second , WEIGHT: arr_sims}
     return pd.DataFrame(d)
 
