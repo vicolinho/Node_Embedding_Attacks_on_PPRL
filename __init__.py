@@ -18,9 +18,11 @@ from attack.node_matching_ import node_matching
 import pandas as pd
 
 from attack.node_embeddings import hyperparameter_tuning, embeddings
+from attack.sim_graph.adjust_sims import compute_real_dice_from_bits
 from classes.settings import Settings
 from attack.preprocessing.preprocessing import BITARRAY, get_bigrams, QGRAMS
-from attack.sim_graph.similarities import edges_df_from_blk_plain, edges_df_from_blk_bf_adjusted
+from attack.sim_graph.similarities import edges_df_from_blk_plain, edges_df_from_blk_bf_adjusted, \
+    combinations_from_blk_dict, edges_df_from_combinations_records, dice_sim_plain
 from attack.sim_graph.analysis import false_negative_rate, get_num_hash_function
 
 #DATA_PLAIN_FILE = "pprl_datasets/ncvoter-20140619-temporal-balanced-ratio-1to1-a.csv"
@@ -136,27 +138,30 @@ def create_sim_graph_encoded(encoded_data, encoded_attr, bf_length, lsh_count, l
     blk_dicts_encoded = blocking.get_dict_dataframes_by_blocking_keys_encoded(encoded_data, encoded_attr, BITARRAY, bf_length, lsh_count, lsh_size)
     logs.log_blk_dist(blk_dicts_encoded)
     nodes = node_features.esti_qgram_count_encoded(encoded_data[BITARRAY], encoded_data[encoded_attr], bf_length, num_of_hash_func, id)
-    edges = DataFrame()
+    comparison_combs = iter(())
     for blk_dict_encoded in blk_dicts_encoded:
-        df_temp = edges_df_from_blk_bf_adjusted(blk_dict_encoded, threshold, encoded_attr,
-                                                bf_length, num_of_hash_func, id)
-        edges = pd.concat([edges, df_temp])
+        comparison_combs = chain(comparison_combs, combinations_from_blk_dict(blk_dict_encoded,
+                                                node_attribute = encoded_attr, sim_attribute = BITARRAY))
+        #df_temp = edges_df_from_blk_bf_adjusted(blk_dict_encoded, threshold, encoded_attr,
+                                               # bf_length, num_of_hash_func, id)
+        #edges = pd.concat([edges, df_temp])
+    edges = edges_df_from_combinations_records(comparison_combs, threshold, sim_func=compute_real_dice_from_bits,
+                node_attribute = encoded_attr, sim_attribute = BITARRAY, bf_length = bf_length, num_hash_f = num_of_hash_func, id = id)
     return nodes, edges
 
-def create_sim_graph_plain_old(plain_data, qgram_attributes, blk_attributes, blk_func, threshold, id):
-    nodes = node_features.qgram_count_plain(plain_data[QGRAMS], id)
-    blk_dicts_plain = blocking.get_dict_dataframes_by_blocking_keys_plain(plain_data, blk_attributes, blk_func)
-    edges = edges_df_from_blk_plain(blk_dicts_plain, qgram_attributes, threshold, id)
-    return nodes, edges
 
 def create_sim_graph_plain(plain_data, encoded_attr, threshold, bf_length, lsh_count, lsh_size, num_of_hash_func, id):
     nodes = node_features.qgram_count_plain(plain_data[QGRAMS], id)
     blk_dicts_encoded = blocking.get_dict_dataframes_by_blocking_keys_encoded(plain_data, QGRAMS, QGRAMS, bf_length, lsh_count, lsh_size)
     logs.log_blk_dist(blk_dicts_encoded)
     edges = DataFrame()
+    comparison_combs = iter(())
     for blk_dict_encoded in blk_dicts_encoded:
-        df_temp = edges_df_from_blk_plain(blk_dict_encoded, [], threshold, id) # qgram_attr isn't needed, not very clean code!
-        edges = pd.concat([edges, df_temp])
+        comparison_combs = chain(comparison_combs, combinations_from_blk_dict(blk_dict_encoded,
+                                node_attribute=QGRAMS, sim_attribute=QGRAMS))
+    edges = edges_df_from_combinations_records(comparison_combs, threshold, node_attribute=QGRAMS, sim_attribute=QGRAMS,
+                sim_func=dice_sim_plain, id=id)
+
     return nodes, edges
 
 
