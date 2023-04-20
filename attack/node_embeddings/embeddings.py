@@ -150,7 +150,6 @@ def normalize_embeddings(embeddings):
 
 def generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings):
     fullbatch_generator = FullBatchNodeGenerator(G, sparse=False)
-    #gcn_model = GCN(layer_sizes=[128], activations=["relu"], generator=fullbatch_generator)
     gcn_model = GCN(layer_sizes=deepgraphinfomax_settings.layers, activations=deepgraphinfomax_settings.activations, generator=fullbatch_generator)
     corrupted_generator = CorruptedGenerator(fullbatch_generator)
     gen = corrupted_generator.flow(G.nodes())
@@ -159,7 +158,7 @@ def generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings):
 
     model = keras.Model(inputs=x_in, outputs=x_out)
     model.compile(loss=tf.nn.sigmoid_cross_entropy_with_logits, optimizer=keras.optimizers.Adam(lr=1e-3))
-    epochs = 100
+    epochs = deepgraphinfomax_settings.epochs
     es = EarlyStopping(monitor="loss", min_delta=0, patience=20)
     history = model.fit(gen, epochs=epochs, verbose=1, callbacks=[es])
     plot_history(history)

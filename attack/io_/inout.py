@@ -87,8 +87,8 @@ def output_results_csv_graphsage(prec, settings, no_matches, graphsage_settings,
 def output_results_csv_deepgraphinfomax(prec, settings, no_matches, deepgraphinfomax_settings, weights):
     common_attr, common_attr_names, df, full_path = output_results_csv_common(no_matches, prec, settings, "deepgraphinfomax_results.csv")
     # cols: File, Dataset, Record_Count, Threshold, Removed_Records, Node_Features (Normal/Histo/Fast), Top 10,50,100,500,1000, LSH_Parameter (Count, Size, Cos_Thold, Hyperplane_Count)
-    deepgraphinfomax_attr = (weights[-1], deepgraphinfomax_settings.layers, deepgraphinfomax_settings.activations)
-    deepgraphinfomax_attr_names = ["weight", "layers", "activation"]
+    deepgraphinfomax_attr = (weights[-1], deepgraphinfomax_settings.layers, deepgraphinfomax_settings.activations, deepgraphinfomax_settings.epochs)
+    deepgraphinfomax_attr_names = ["weight", "layers", "activation", "epochs"]
     df_append = pd.DataFrame([tuple([*common_attr, *deepgraphinfomax_attr])],
                              columns=[*common_attr_names, *deepgraphinfomax_attr_names])
     df = pd.concat([df, df_append])
