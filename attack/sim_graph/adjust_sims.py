@@ -1,6 +1,8 @@
 import math
 
-# https://doi.org/10.1021/ci600526a
+# functions to convert hamming weight of bloom filters into estimated qgram counts
+# source: https://doi.org/10.1021/ci600526a
+
 def compute_number_of_qgrams(bf_length, num_hash_f, number_of_bits):
     qgrams = -((bf_length) / num_hash_f) * \
                          math.log(1.0 - float(number_of_bits) / bf_length)

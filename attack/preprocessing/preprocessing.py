@@ -1,35 +1,23 @@
 import base64
 
-import numpy as np
+import mmh3 as mmh3
 from bitarray import bitarray
 from nltk import ngrams
 
-from attack import blocking
+from attack.constants import BITARRAY, QGRAMS, NODE_COUNT
+from attack.sim_graph.analysis import get_count_hash_func
 
-BITARRAY = 'bitarray'
 
-from attack.blocking import blocking
 
-def decode(base_string, length=1024):
-    bf_array = bitarray(length, endian='little')
-    bf_array.setall(0)
-    if isinstance(base_string, str):
-        bf_string = base64.b64decode(base_string.strip())
-        bf = list()
-        for index, bit in enumerate(bf_string.strip()):
-            bytes_little = bit.to_bytes(1, 'little')
-            array = [access_bit(bytes_little, i) for i in range(len(bytes_little) * 8)]
-            bf.extend(array)
-        non_zero = np.nonzero(np.asarray(bf))
-        for i in non_zero[0]:
-            bf_array[int(i)] = 1
-    return bf_array
+
+def decode(byte_string, bf_length):
+    bf = [access_bit(byte_string, i) for i in range(len(byte_string) * 8)]
+    missing_bits = bf_length - len(bf)
+    bf.extend(missing_bits * [0])
+    return bitarray(bf)
 
 def encode(bf):
     return base64.b64encode(bf.tobytes())
-
-
-
 
 def access_bit(data, num):
     base = int(num // 8)
@@ -38,17 +26,19 @@ def access_bit(data, num):
 
 
 def preprocess_encoded_df(df, encoded_attr):
-    df = df.drop_duplicates(subset=encoded_attr)
-    df[BITARRAY] = list(map(decode, df[encoded_attr]))
+    bytes = df[encoded_attr].apply(base64.b64decode)
+    bf_length = max(bytes.apply(len)) * 8
+    df[BITARRAY] = bytes.apply(decode, args=(bf_length,))
+    df = finalize_df_with_node_count(df, encoded_attr)
     return df
 
 
-def preprocess_plain_df(df, lst_qgram_attr, lst_blocking_attr, encoded_attr, padding):
-    duplicates_subset = lst_qgram_attr + lst_blocking_attr
-    df = df.drop_duplicates(subset=duplicates_subset)
-    df = add_qgrams_as_key(df, lst_qgram_attr, padding)
-    df = add_bf_as_key(df, encoded_attr)
-    return df
+def preprocess_plain_df(plain_data, encoded_data, lst_qgram_attr, encoded_attr, padding, bf_length):
+    df = add_qgrams_as_key(plain_data, lst_qgram_attr, padding)
+    no_hash_func = get_count_hash_func(plain_data, encoded_data)
+    df = add_bf_as_key(df, encoded_attr, bf_length, no_hash_func)
+    df = finalize_df_with_node_count(df, QGRAMS)
+    return df, no_hash_func
 
 
 def add_qgrams_as_key(df, qgram_attributes, padding):
@@ -59,11 +49,15 @@ def add_qgrams_as_key(df, qgram_attributes, padding):
         df[QGRAMS] = list(map(get_bigrams_padding, *cols))
     else:
         df[QGRAMS] = list(map(get_bigrams, *cols))
-    df = df.drop_duplicates(subset=QGRAMS)
     return df
 
-def add_bf_as_key(df, encoded_attr):
-    df[BITARRAY] = blocking.qgrams_to_bfs(list(df[QGRAMS]), 1024, 15)
+def finalize_df_with_node_count(df, attribute):
+    df[NODE_COUNT] = df.groupby(attribute)[attribute].transform("size")
+    df = df.drop_duplicates(subset=attribute)
+    return df
+
+def add_bf_as_key(df, encoded_attr, bf_size, num_hash_func):
+    df[BITARRAY] = qgrams_to_bfs(list(df[QGRAMS]), bf_size, num_hash_func)
     df[encoded_attr] = list(map(encode, df[BITARRAY]))
     return df
 
@@ -81,4 +75,26 @@ def get_bigrams_padding(*args):
 
 
 
-QGRAMS = 'qgrams'
+
+
+
+def qgrams_to_bfs(qgrams_lists, bf_length, count_hash_func):
+    bitarray_list = []
+    seeds = list(range(0, count_hash_func))
+    for qgrams_list in qgrams_lists:
+        ba = bitarray(bf_length)
+        ba.setall(0)
+        for qgram in qgrams_list:
+            qgram_string = ''.join(qgram)
+            for seed in seeds:
+                ba[mmh3.hash(qgram_string, seed) % bf_length] = 1
+        bitarray_list.append(ba)
+    return bitarray_list
+
+
+def preprocess_dfs(encoded_data, plain_data, settings):
+    encoded_data = preprocess_encoded_df(encoded_data, settings.encoded_attr)
+    bf_length = len(encoded_data.loc[0, BITARRAY])
+    plain_data, no_hash_func = preprocess_plain_df(plain_data, encoded_data, settings.qgram_attributes, settings.encoded_attr, settings.padding,
+                                                   bf_length)
+    return plain_data, encoded_data, no_hash_func, bf_length

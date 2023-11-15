@@ -1,61 +1,12 @@
 import random
 
-import mmh3 as mmh3
 from bitarray import bitarray
-from pandas import DataFrame
 
-from attack.preprocessing.preprocessing import BITARRAY
+from attack.constants import BITARRAY, LSH_BLOCKING
 
-LSH_BLOCKING = 'lsh_blocking'
-BLOCKING = 'blocking'
 
-def blk_func(func, *args):
-    key = str()
-    for arg in args:
-        key += func(arg)
-    return key
 
-sound_dict = {
-    **dict.fromkeys(['a', 'e', 'i', 'o', 'u', 'y', 'h', 'w'], ''),
-    **dict.fromkeys(['b', 'f', 'p', 'v'], '1'),
-    **dict.fromkeys(['c', 'g', 'j', 'k', 'q', 's', 'x', 'z'], '2'),
-    **dict.fromkeys(['d', 't'], '3'),
-    **dict.fromkeys(['l'], '4'),
-    **dict.fromkeys(['m', 'n'], '5'),
-    **dict.fromkeys(['r'], '6')
-  }
 
-def soundex_core(attr):
-    if len(attr) == 0:
-        return '0000'
-    elif len(attr) == 1:
-        start, attr = attr[0], ''
-    else:
-        start, attr = attr[0], attr[1:]
-    soundex_attr = ''
-    last_number = -1
-    for attr_char in attr:
-        if not attr_char in sound_dict.keys():
-            continue
-        curr_number = sound_dict[attr_char]
-        if curr_number != last_number:
-            soundex_attr += curr_number
-            last_number = curr_number if curr_number != '' else last_number
-        if len(soundex_attr) >= 3:
-            break
-    while len(soundex_attr) < 3:
-        soundex_attr += '0'
-    soundex_attr = start + soundex_attr
-    return soundex_attr
-
-def soundex(attr_list):
-    sdxcode = str()
-    for attr in attr_list:
-        sdxcode += soundex_core(attr)
-    return sdxcode
-
-def no_blocking(attr_list):
-    return ''
 
 def get_blocking_dict(df, blk_key_attr): #todo: additional needed attr
     blk_dict = dict()
@@ -88,7 +39,7 @@ def add_lsh_blocking_columns(df, lst_permutations):
         df[LSH_BLOCKING+str(i)] = list(map(lsh_blocking_key, col, len(col) * [lst_permutations[i]]))
     return df
 
-def get_dict_dataframes_by_blocking_keys_encoded(df, key_attr, sim_attr ,bf_size, lsh_count, lsh_size):
+def get_dict_dataframes_by_blocking_keys(df, key_attr, sim_attr, bf_size, lsh_count, lsh_size):
     lst_dicts = []
     lst_permutations = choose_positions(lsh_count, lsh_size, bf_size)
     df = add_lsh_blocking_columns(df, lst_permutations)
@@ -101,26 +52,4 @@ def get_dict_dataframes_by_blocking_keys_encoded(df, key_attr, sim_attr ,bf_size
         lst_dicts.append(get_blocking_dict(df_temp,blk_key_attr))
     return lst_dicts
 
-def get_dict_dataframes_by_blocking_keys_plain(df, blk_attr_list, blk_func):
-    df[BLOCKING] = add_blocking_keys_to_dfs(df, blk_attr_list, blk_func)
-    return get_blocking_dict(df, BLOCKING)
 
-def add_blocking_keys_to_dfs(df_all, blk_attr, blk_func):
-    cols = DataFrame()
-    for attribute in blk_attr:
-        cols[attribute] = df_all[attribute]
-    return cols.apply(func=blk_func, axis=1)
-
-
-def qgrams_to_bfs(qgrams_lists, bf_length, count_hash_func):
-    bitarray_list = []
-    seeds = list(range(0, count_hash_func))
-    for qgrams_list in qgrams_lists:
-        ba = bitarray(bf_length)
-        ba.setall(0)
-        for qgram in qgrams_list:
-            qgram_string = ''.join(qgram)
-            for seed in seeds:
-                ba[mmh3.hash(qgram_string, seed) % bf_length] = 1
-        bitarray_list.append(ba)
-    return bitarray_list

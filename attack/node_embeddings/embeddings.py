@@ -1,74 +1,30 @@
-import networkx as nx
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from gensim.models import Word2Vec
-from sklearn.preprocessing import StandardScaler
-from stellargraph import StellarGraph
-from stellargraph.data import BiasedRandomWalk, UnsupervisedSampler
+from stellargraph.data import UnsupervisedSampler
 from stellargraph.layer import GraphSAGE, link_classification, GCN, DeepGraphInfomax
 from stellargraph.mapper import GraphSAGELinkGenerator, GraphSAGENodeGenerator, GraphWaveGenerator, \
     FullBatchNodeGenerator, CorruptedGenerator
 from stellargraph.utils import plot_history
 from tensorflow import keras
 from tensorflow.python.keras.callbacks import EarlyStopping
-#from tensorflow.keras import Model
 
+from attack.graphwave_ext import graphwave_ext
 from classes.embedding_results import Embedding_results
 
 
-FEATURES = 'Features'
-GRAPHSAGE = 'GraphSAGE'
-GRAPHWAVE = 'GraphWave'
-DEEPGRAPHINFOMAX = 'DeepGraphInfomax'
-
-def generate_node_embeddings_node2vec(graph): # not useful only includes node ids not structures or similarities
-    # https://stellargraph.readthedocs.io/en/stable/demos/embeddings/node2vec-embeddings.html
-    rw = BiasedRandomWalk(graph)
-    node_list = list(graph.nodes())
-    walks = rw.run(
-        nodes=node_list,  # root nodes
-        length=10,  # maximum length of a random walk 100
-        n=10,  # number of random walks per root node 10
-        p=1.0,  # Defines (unormalised) probability, 1/p, of returning to source node 0.5
-        q=2.0,  # Defines (unormalised) probability, 1/q, for moving away from source node 2.0
-    )
-    print("Number of random walks: {}".format(len(walks)))
-
-    str_walks = [[str(n) for n in walk] for walk in walks]
-    model = Word2Vec(str_walks, vector_size=128, window=5, min_count=0, sg=1, workers=2, epochs=1)
-    node_ids = model.wv.index_to_key  # list of node IDs
-    node_embeddings = (
-        model.wv.vectors
-    )  # numpy.ndarray of size number of nodes times embeddings dimensionality
-
-    # TESTING PURPOSES:
-    return node_embeddings, node_ids
-
-
-def add_node_features_to_embeddings(node_embeddings, node_ids, node_weights, count):
-    new_size = (np.shape(node_embeddings)[0], np.shape(node_embeddings)[1] + count)
-    node_embeddings_new = np.zeros(new_size)
-    for i in range(0, len(node_embeddings)):
-        weight = node_weights.loc[str(node_ids[0])][0]
-        node_embeddings_new[i] = np.append(node_embeddings[i], (count * [weight]))
-    return node_embeddings_new
-
-
-def generate_node_embeddings_graphsage(G, graphsage_settings, learning_G = None):
+def generate_node_embeddings_graphsage(G, graphsage_settings, scaler):
     # https://stellargraph.readthedocs.io/en/stable/demos/embeddings/graphsage-unsupervised-sampler-embeddings.html
-    if learning_G == None:
-        learning_G = G
-    learning_nodes = list(learning_G.nodes())
+    nodes = list(G.nodes())
     number_of_walks = graphsage_settings.number_of_walks
     length = graphsage_settings.length
     unsupervised_samples = UnsupervisedSampler(
-        learning_G, nodes=learning_nodes, length=length, number_of_walks=number_of_walks
+        G, nodes=nodes, length=length, number_of_walks=number_of_walks
     )
     batch_size = graphsage_settings.batch_size
     epochs = graphsage_settings.epochs
     num_samples = graphsage_settings.num_samples
-    generator = GraphSAGELinkGenerator(learning_G, batch_size, num_samples)
+    generator = GraphSAGELinkGenerator(G, batch_size, num_samples)
     train_gen = generator.flow(unsupervised_samples)
     layer_sizes = graphsage_settings.layers
     graphsage = GraphSAGE(
@@ -97,18 +53,32 @@ def generate_node_embeddings_graphsage(G, graphsage_settings, learning_G = None)
     x_inp_src = x_inp[0::2]
     x_out_src = x_out[0]
     embedding_model = keras.Model(inputs=x_inp_src, outputs=x_out_src)
-    nodes = list(G.nodes())
     node_gen = GraphSAGENodeGenerator(G, batch_size, num_samples).flow(nodes)
     node_embeddings = embedding_model.predict(node_gen, workers=4, verbose=1)
+    embeddings_transformed = normalize_embeddings(node_embeddings, scaler)
+    return Embedding_results(embeddings_transformed, nodes, str(graphsage_settings), graphsage_settings)
 
-    return Embedding_results(node_embeddings, nodes, str(graphsage_settings), graphsage_settings)
 
+def generate_node_embeddings_graphwave(G, graphwave_settings, scaler, external_lib):
+    """
+    calculates node embeddings either with a custom library to be imported or if not found with StellarGraph
+    StellarGraph one doesn't support edge weights
+    :param G:
+    :param graphwave_settings:
+    :param scaler:
+    :return:
+    """
+    if external_lib:
+        return generate_node_embeddings_graphwave_lib(G, graphwave_settings, scaler)
+    else:
+        graphwave_settings.set_label_for_stellargraph_func()
+        return generate_node_embeddings_graphwave_sg(G, graphwave_settings, scaler)
 
-def generate_node_embeddings_graphwave_sg(G, graphwave_settings):
+def generate_node_embeddings_graphwave_sg(G, graphwave_settings, scaler):
     sample_points = np.linspace(
         0, graphwave_settings.sample_p_max_val, graphwave_settings.no_samples
     ).astype(np.float32)
-    degree = graphwave_settings.degree
+    degree = graphwave_settings.order_approx
     scales = graphwave_settings.scales
 
     generator = GraphWaveGenerator(G, scales=scales, degree=degree)
@@ -119,36 +89,31 @@ def generate_node_embeddings_graphwave_sg(G, graphwave_settings):
 
     embeddings = [x.numpy() for x in embeddings_dataset]
     embeddings = np.reshape(embeddings, (len(embeddings), len(embeddings[0][0])))
-    embeddings_transformed = normalize_embeddings(embeddings)
+    embeddings_transformed = normalize_embeddings(embeddings, scaler)
     return Embedding_results(embeddings_transformed, node_ids, str(graphwave_settings), graphwave_settings)
 
 
-def generate_node_embeddings_graphwave(G, graphwave_settings):
-    import sys
-    sys.path.insert(0, graphwave_settings.graphwave_libpath)
-    import graphwave
+def generate_node_embeddings_graphwave_lib(G, graphwave_settings, scaler):
     sample_points = np.linspace(
         0, graphwave_settings.sample_p_max_val, graphwave_settings.no_samples
     )
     if graphwave_settings.scales == ['auto']:
-        chi, heat_print, taus = graphwave.graphwave_alg(G, sample_points)
+        chi, heat_print, taus = graphwave_ext.graphwave_alg(G, sample_points, order=graphwave_settings.order_approx)
         graphwave_settings.scales = taus
     else:
-        chi, heat_print, taus = graphwave.graphwave_alg(G, sample_points, taus=graphwave_settings.scales)
+        chi, heat_print, taus = graphwave_ext.graphwave_alg(G, sample_points, taus=graphwave_settings.scales, order=graphwave_settings.order_approx)
 
     node_ids = list(G)
-    embeddings = chi
-    embeddings_transformed = normalize_embeddings(embeddings)
+    embeddings_transformed = normalize_embeddings(chi, scaler)
     return Embedding_results(embeddings_transformed, node_ids, str(graphwave_settings), graphwave_settings)
 
 
-def normalize_embeddings(embeddings):
-    scaler = StandardScaler()
+def normalize_embeddings(embeddings, scaler):
     scaler.fit(embeddings)
     embeddings_transformed = scaler.transform(embeddings)
     return embeddings_transformed
 
-def generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings):
+def generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings, scaler):
     fullbatch_generator = FullBatchNodeGenerator(G, sparse=False)
     gcn_model = GCN(layer_sizes=deepgraphinfomax_settings.layers, activations=deepgraphinfomax_settings.activations, generator=fullbatch_generator)
     corrupted_generator = CorruptedGenerator(fullbatch_generator)
@@ -160,7 +125,8 @@ def generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings):
     model.compile(loss=tf.nn.sigmoid_cross_entropy_with_logits, optimizer=keras.optimizers.Adam(lr=1e-3))
     epochs = deepgraphinfomax_settings.epochs
     es = EarlyStopping(monitor="loss", min_delta=0, patience=20)
-    history = model.fit(gen, epochs=epochs, verbose=1, callbacks=[es])
+    #history = model.fit(gen, epochs=epochs, verbose=1, callbacks=[es])
+    history = model.fit(gen, epochs=epochs, verbose=1, callbacks=[es], batch_size=32)
     plot_history(history)
     x_emb_in, x_emb_out = gcn_model.in_out_tensors()
 
@@ -173,32 +139,16 @@ def generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings):
 
     node_gen = fullbatch_generator.flow(node_subjects)
     embeddings = emb_model.predict(node_gen)
-    embeddings = normalize_embeddings(embeddings)
+    embeddings = normalize_embeddings(embeddings, scaler)
     return Embedding_results(embeddings, node_subjects, str(deepgraphinfomax_settings), deepgraphinfomax_settings)
 
-
-def generate_node_embeddings_gcn(G):
-    pass
 
 def just_features_embeddings(G, settings):
     embeddings = G.node_features()
     df = pd.DataFrame(data=embeddings, index=G.nodes())
-    df = df[df[1] >= settings.min_edges] # see node_features.py
     embeddings = df.to_numpy()
-    embeddings = normalize_embeddings(embeddings)
+    embeddings = normalize_embeddings(embeddings, settings.scaler)
     return Embedding_results(embeddings, df.index, "features")
-
-def combine_embeddings(embeddings_list, node_ids_list):
-    embeddings = []
-    node_ids = []
-    dict_1 = dict(zip(node_ids_list[0], embeddings_list[0]))
-    for i in range(1, len(embeddings_list)):
-        for j in range(0, len(embeddings_list[i])):
-            dict_1[node_ids_list[i][j]] = np.append(dict_1[node_ids_list[i][j]],embeddings_list[i][j])
-    for key, value in dict_1.items():
-        embeddings.append(value)
-        node_ids.append(key)
-    return embeddings, node_ids
 
 def multiple_embeddings_to_one(embeddings_):
     """helper function: when analysing combination of embeddings you have to distinguish between both kinds
@@ -209,18 +159,6 @@ def multiple_embeddings_to_one(embeddings_):
         return embeddings
     else:
         return embeddings_[0]
-
-def create_learning_G_from_true_matches_graphsage(G, true_matches):
-    true_matches = [("u_"+t[0], "v_"+t[1]) for t in true_matches]
-    learning_graph = G.copy() # keeping node attributes
-    learning_graph = nx.create_empty_copy(learning_graph)
-    learning_graph.add_edges_from(true_matches)
-    learning_graph = learning_graph.subgraph(G.nodes())
-    return StellarGraph.from_networkx(learning_graph, node_features="feature")
-
-def generate_node_embeddings_custom(G):
-    pass
-
 
 
 

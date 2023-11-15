@@ -1,18 +1,14 @@
+from stellargraph import StellarGraph
+
+from attack.io_ import inout
 from attack.node_embeddings import embeddings
 from classes.deepgraphinfomax_settings import Deepgraphinfomax_settings
 from classes.graphsage_settings import Graphsage_settings
 from classes.graphwave_settings import Graphwave_settings
 
-def embeddings_hyperparameter_deepgraphinfomax(G, deepgraphinfomax_settings_list): # not in use because just combined with features which is better with generators but perhaps still needed
-    embedding_results_list = []
+def embeddings_hyperparameter_deepgraphinfomax_gen(G, deepgraphinfomax_settings_list, scaler):
     for deepgraphinfomax_settings in deepgraphinfomax_settings_list:
-        embedding_results = embeddings.generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings)
-        embedding_results_list.append(embedding_results)
-    return embedding_results_list
-
-def embeddings_hyperparameter_deepgraphinfomax_gen(G, deepgraphinfomax_settings_list):
-    for deepgraphinfomax_settings in deepgraphinfomax_settings_list:
-        yield embeddings.generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings)
+        yield embeddings.generate_node_embeddings_deepgraphinfomax(G, deepgraphinfomax_settings, scaler)
 
 def get_params_deepgraphinfomax(config):
     layer_structures_list = config.deepgraphinfomax_settings[config.LAYER_STRUCTURES_LIST]
@@ -33,16 +29,9 @@ def get_default_params_deepgraphinfomax(config):
         epochs_list = configs_count * [100]
     return epochs_list
 
-def embeddings_hyperparameter_graphsage(G, graphsage_settings_list, learning_G = None):
-    embedding_results_list = []
+def embeddings_hyperparameter_graphsage_gen(G, graphsage_settings_list, scaler):
     for graphsage_settings in graphsage_settings_list:
-        embedding_results = embeddings.generate_node_embeddings_graphsage(G, graphsage_settings, learning_G)
-        embedding_results_list.append(embedding_results)
-    return embedding_results_list
-
-def embeddings_hyperparameter_graphsage_gen(G, graphsage_settings_list, learning_G = None):
-    for graphsage_settings in graphsage_settings_list:
-        yield embeddings.generate_node_embeddings_graphsage(G, graphsage_settings, learning_G)
+        yield embeddings.generate_node_embeddings_graphsage(G, graphsage_settings, scaler)
 
 def get_params_graphsage(config):
     layer_structures_list = config.graphsage_settings[config.LAYER_STRUCTURES_LIST]
@@ -77,19 +66,38 @@ def get_default_params_graphsage(config):
         epochs_list = configs_count * [10]
     return num_walks_list, length_list, batch_size_list, epochs_list
 
-def embeddings_hyperparameter_graphwave_gen(G, graphwave_settings_list):
+def embeddings_hyperparameter_graphwave_gen(G, graphwave_settings_list, settings):
+    if settings.graphwave_external_lib:
+        gw_graph = get_graph_for_original_graphwave(G, settings)
+    else:
+        gw_graph = G
     for graphwave_settings in graphwave_settings_list:
-        yield embeddings.generate_node_embeddings_graphwave(G, graphwave_settings)
+        yield embeddings.generate_node_embeddings_graphwave(gw_graph, graphwave_settings, settings.scaler, settings.graphwave_external_lib)
 
-def get_default_params_graphwave(graphwave_lib_path, config):
+def get_graph_for_original_graphwave(graph, settings):
+    if inout.graphwave_graph_exists(settings) and settings.mode == 'graph_load':
+        G = inout.load_graph_for_graphwave_org(settings)
+    else:
+        G = StellarGraph.to_networkx(graph)
+        inout.save_graph_for_graphwave_org(G, settings)
+    return G
+
+def get_default_params_graphwave(graphwave_ext, config):
     graphwave_settings_list = []
     sample_pct_list = config.graphwave_settings[config.SAMPLE_PCT_LIST]
-    for i in range(0, len(sample_pct_list)):
+    configs_count = len(sample_pct_list)
+    try:
+        degree = config.graphwave_settings[config.DEGREE_LIST]
+    except:
+        degree = configs_count * [30]
+    for i in range(0, configs_count):
         sample_pct = config.graphwave_settings[config.SAMPLE_PCT_LIST][i]
         scales = config.graphwave_settings[config.SCALES_LIST][i]
-        graphwave_settings = Graphwave_settings(graphwave_libpath=graphwave_lib_path,
-            scales=scales, sample_p_max_val=sample_pct[1], no_samples=sample_pct[2]
-        )
+        if not graphwave_ext and scales == ['auto']:
+            scales = graphwave_ext.TAUS
+        order_approx = degree[i]
+        graphwave_settings = Graphwave_settings(scales=scales, sample_p_max_val=sample_pct[1], no_samples=sample_pct[2],
+                                                order_approx=order_approx)
         graphwave_settings_list.append(graphwave_settings)
     return graphwave_settings_list
 

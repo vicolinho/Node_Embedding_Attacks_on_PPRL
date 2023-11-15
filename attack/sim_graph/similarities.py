@@ -4,9 +4,8 @@ from itertools import combinations
 from pandas import DataFrame
 from stellargraph.globalvar import SOURCE, TARGET, WEIGHT
 
-from attack.preprocessing.preprocessing import QGRAMS
+from attack.constants import QGRAMS, BITARRAY, LSH_BLOCKING
 from attack.sim_graph import sim_graph
-from attack.preprocessing.preprocessing import BITARRAY
 from attack.sim_graph.adjust_sims import compute_real_dice_from_bits
 
 
@@ -41,23 +40,29 @@ def edges_df_from_blk_element_bf_adjusted(df, encoded_attr, threshold, id, bf_le
 
 def edges_df_from_blk_element(df, threshold, node_attribute, sim_attribute, sim_func, id, **kwargs):
     arr_first, arr_second, arr_sims = [], [], []
-    if node_attribute == sim_attribute:
-        df = df.loc[:, [node_attribute]]
-    else:
-        df = df.loc[:, [node_attribute, sim_attribute]]
+    number = (df.columns[0]).find(LSH_BLOCKING) + len(LSH_BLOCKING)
+    i = int(df.columns[0][number:])
+    columns = df.columns[-i:] if i > 0 else []
+    df = df.loc[:, [node_attribute, sim_attribute, *columns]]
+    df.columns.values[0] = 'node_attribute'
+    df.columns.values[1] = 'sim_attribute' # can't have same column name twice
     records = df.to_records(index=False)  # needed for using combinations function
     pairs = list(combinations(records, 2))
     for pair in pairs:
-        if node_attribute != sim_attribute:
+        if not pair_computed(pair):
             sim = sim_func(pair[0][1], pair[1][1], **kwargs)
-        else:
-            sim = sim_func(pair[0][0], pair[1][0], **kwargs)
-        if sim >= threshold:
-            arr_first.append(sim_graph.adjust_node_id(pair[0][0], id))
-            arr_second.append(sim_graph.adjust_node_id(pair[1][0], id))
-            arr_sims.append(sim)
+            if sim >= threshold:
+                arr_first.append(sim_graph.adjust_node_id(pair[0][0], id))
+                arr_second.append(sim_graph.adjust_node_id(pair[1][0], id))
+                arr_sims.append(sim)
     d = {SOURCE: arr_first, TARGET: arr_second , WEIGHT: arr_sims}
     return pd.DataFrame(d)
+
+def pair_computed(pair):
+    for i in range(2, len(pair[0])):
+        if pair[0][i] == pair[1][i]:
+            return True
+    return False
 
 def get_comp_rec_pairs(df, node_attribute, sim_attribute): # must integrate both functions which are redundant
     if node_attribute == sim_attribute:

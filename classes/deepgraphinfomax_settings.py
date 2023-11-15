@@ -1,12 +1,11 @@
-from attack.node_embeddings import embeddings
-
+import attack.constants
 
 class Deepgraphinfomax_settings():
 
     def __init__(self, layers, activations, epochs):
         self.layers = layers
         self.activations = activations
-        self.technique = embeddings.DEEPGRAPHINFOMAX
+        self.technique = attack.constants.DEEPGRAPHINFOMAX
         self.epochs = epochs
 
     def __str__(self):

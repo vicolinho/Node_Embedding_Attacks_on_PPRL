@@ -1,3 +1,4 @@
+import attack.constants
 from attack.node_embeddings import embeddings
 
 
@@ -14,7 +15,7 @@ class Graphsage_settings():
         self.batch_size = batch_size
         self.epochs = epochs
         self.num_samples = num_samples
-        self.technique = embeddings.GRAPHSAGE
+        self.technique = attack.constants.GRAPHSAGE
 
     def __str__(self):
         return "{0} (lay: {1}, |Samples|: {2}, |W|: {3}, W_len: {4}, |B|: {5}, Eps: {6})"\
