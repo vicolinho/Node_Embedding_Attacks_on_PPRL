@@ -1,6 +1,7 @@
 import time
 
 import networkx as nx
+import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from stellargraph import StellarGraph
@@ -27,11 +28,11 @@ def create_graph(nodes, edges, min_comp_size, settings):
     :return:
     """
     G = nx.from_pandas_edgelist(edges, edge_attr=True)
-    G = remove_small_comp_of_graph(G, settings.min_comp_size)
+    G = remove_small_comp_of_graph_nx(G, settings.min_comp_size)
     node_data = node_features.add_node_features_vidange_networkx(G, nodes, min_comp_size, settings)
     return G, node_data
 
-def remove_small_comp_of_graph(G, min_size):
+def remove_small_comp_of_graph_nx(G, min_size):
     """
     :param G: networkx Graph (here a similarity graph)
     :param min_size (int): minimal size of connected component
@@ -42,6 +43,20 @@ def remove_small_comp_of_graph(G, min_size):
             for node in comp:
                 G.remove_node(node)
     return G
+
+def remove_small_comp_of_graph_sg(G, min_size):
+    """
+    :param G: StellarGraph (here a similarity graph)
+    :param min_size (int): minimal size of connected component
+    :return: StellarGraph: new Graph without nodes of too small connected components
+    """
+    list_valid_nodes = np.array([])
+    for comp in list(G.connected_components()):
+        if len(comp) >= min_size:
+            list_valid_nodes = np.append(list_valid_nodes, comp)
+        else:
+            break #it's valid because StellarGraph orders its connected components from big to small
+    return G.subgraph(list_valid_nodes)
 
 
 def calculate_sim_graph_data_encoded(encoded_data, settings, bf_length, num_of_hash_func, id):

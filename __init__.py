@@ -25,7 +25,7 @@ def main():
     if settings.mode == 'graph_load':
         combined_graph, actual_matches = attack.io_.inout.load_graph_tp(graph_path=settings.pickle_file)
         if settings.min_comp_size:
-            combined_graph = sim_graph.remove_small_comp_of_graph(combined_graph, settings.min_comp_size)
+            combined_graph = sim_graph.remove_small_comp_of_graph_sg(combined_graph, settings.min_comp_size)
     else:
         combined_graph, actual_matches = generate_graph(settings)
         if settings.mode == "graph_save":

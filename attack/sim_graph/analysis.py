@@ -11,7 +11,7 @@ def get_count_hash_func(df_plain, df_encoded):
     :param df_encoded: pd.DataFrame with encoded data (bitarrays are needed)
     :return: int: estimated number of hashing functions
     """
-    bf_length = len(df_encoded.loc[0,BITARRAY])
+    bf_length = len(df_encoded.iloc[0][BITARRAY])
     df_plain = df_plain.sample(n = 1000, random_state=1) if len(df_plain) >= 1000 else df_plain
     df_encoded = df_encoded.sample(n = 1000, random_state=121) if len(df_encoded) >= 1000 else df_encoded
     ones = list(map(lambda ba: ba.count(1), df_encoded[BITARRAY]))

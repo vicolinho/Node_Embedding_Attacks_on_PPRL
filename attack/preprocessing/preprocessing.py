@@ -94,7 +94,7 @@ def qgrams_to_bfs(qgrams_lists, bf_length, count_hash_func):
 
 def preprocess_dfs(encoded_data, plain_data, settings):
     encoded_data = preprocess_encoded_df(encoded_data, settings.encoded_attr)
-    bf_length = len(encoded_data.loc[0, BITARRAY])
+    bf_length = len(encoded_data.iloc[0][BITARRAY])
     plain_data, no_hash_func = preprocess_plain_df(plain_data, encoded_data, settings.qgram_attributes, settings.encoded_attr, settings.padding,
                                                    bf_length)
     return plain_data, encoded_data, no_hash_func, bf_length
