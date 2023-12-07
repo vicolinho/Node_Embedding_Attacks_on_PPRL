@@ -1,6 +1,6 @@
 # ------ not my work ------- just the here needed stuff -------------- not installable by pip etc.
-# external work from https://github.com/m4ttr4ymond/graphwave-python3
-# = a fork from original https://github.com/snap-stanford/graphwave (in python2.7)
+# original https://github.com/snap-stanford/graphwave (in python2.7)
+# conversion to python3 from https://github.com/m4ttr4ymond/graphwave-python3
 
 import math
 import networkx as nx

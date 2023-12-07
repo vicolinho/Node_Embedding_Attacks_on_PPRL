@@ -4,6 +4,9 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 
 class Settings:
+    """
+    object stores settings for this app from parser
+    """
     def __init__(self, parser):
         self.mode = parser.mode
         if self.mode == "graph_save" or self.mode == "graph_save_calculate":
@@ -16,7 +19,7 @@ class Settings:
             self.graph_path = parser.graph_path
             self.plain_file = parser.plain_file
             self.encoded_file = parser.encoded_file
-            self.graph_scaled = parser.graph_scaled
+            self.graph_scaled = parser.nf_scaled
             self.padding = parser.padding
             self.lsh_count_blk = int(parser.lsh_count_blocking)
             self.lsh_size_blk = int(parser.lsh_size_blocking)
@@ -47,6 +50,9 @@ class Settings:
         self.min_comp_size = int(parser.min_comp_size)
 
     def normalize_weights_vidanage(self):
+        """
+        normalize vidanage weights (cosine similarity, similarity confidence, degree confidence), so that sum of weights = 1
+        """
         w_cos, w_sim_conf, w_degr_conf = self.vidanage_weights[0], self.vidanage_weights[1], self.vidanage_weights[2]
         sum_weights = w_cos + w_sim_conf + w_degr_conf
         if sum_weights != 1.0:
@@ -54,12 +60,3 @@ class Settings:
             w_sim_conf /= sum_weights
             w_degr_conf /= sum_weights
             self.vidanage_weights = [w_cos, w_sim_conf, w_degr_conf]
-
-    def is_gw_lib_valid(self):
-        try:
-            import sys
-            sys.path.insert(0, self.graphwave_external_lib)
-            import graphwave
-            return True
-        except:
-            return False

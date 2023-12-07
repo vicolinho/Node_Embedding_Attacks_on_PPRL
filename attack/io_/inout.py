@@ -1,6 +1,5 @@
 import os
 import pickle
-from pathlib import Path
 
 import pandas as pd
 
@@ -8,21 +7,36 @@ from classes.graphfile_settings import graphfile_settings
 
 
 def load_graph_tp(graph_path):
+    """
+    :param graph_path (str): path to pickle file with similarity graph (with node features) and actual matches
+    :return: similarity graph (StellarGraph), actual matches (list of tuples)
+    """
     with open(graph_path, 'rb') as input:
         tpl = pickle.load(input)
     return tpl[0], tpl[1]
 
-def save_graph_tp(graph, true_matches, settings):
+def save_graph_tp(graph, actual_matches, settings):
+    """
+    saves similarity graph and actual matches in a pickle file
+    :param graph (StellarGraph): similarity graph with node features
+    :param actual_matches (list of tuples)
+    :param settings (Settings): needed for parameters to get path, filename, ...
+    """
     subpath = settings.graph_path
     os.makedirs(subpath, exist_ok=True)
     filename = subpath + "/" + get_filename_template(settings) + ".pkl"
     settings.pickle_file = filename
-    tpl = (graph, true_matches)
+    tpl = (graph, actual_matches)
     delete_graphwave_graph(settings)
     with open(filename, 'wb') as output:
         pickle.dump(tpl, output, pickle.HIGHEST_PROTOCOL)
 
 def get_filename_template(settings):
+    """
+    gets filename for pickle file
+    :param settings (Settings): needed for parameters
+    :return: str: filename
+    """
     if settings.mode != "graph_load":
         nc_suffix = '_nodeCount' if settings.node_count else ''
         comp_suffix = "_comp{}".format(settings.min_comp_size) if not settings.min_comp_size == 3 else ''
@@ -44,6 +58,12 @@ def get_filename_template(settings):
     return filename
 
 def output_results_csv_features(prec, settings, no_matches):
+    """
+    saves precision data for node features only in a csv
+    :param prec (list of float): precision values for top x matches
+    :param settings (Settings)
+    :param no_matches (list of int): number of matches to be evaluated
+    """
     common_attr, common_attr_names, df, full_path = output_results_csv_common(no_matches, prec, settings, "features_results.csv")
     # cols: File, Dataset, Record_Count, Threshold, Removed_Records, Node_Features (Mode), Top 10,50,100,500,1000, LSH_Parameter (Count, Size, Cos_Thold, Hyperplane_Count)
     df_append = pd.DataFrame([tuple([*common_attr])], columns=[*common_attr_names])
@@ -51,6 +71,12 @@ def output_results_csv_features(prec, settings, no_matches):
     df.to_csv(full_path, index=False)
 
 def output_performance_node_features_results(time, feature_set, settings):
+    """
+    saves calculation time for node features in csv
+    :param time (float): time needed for calculation of node features
+    :param feature_set (str): setting for selection of node features
+    :param settings (Settings)
+    """
     subpath = settings.graph_path + "/performance"
     os.makedirs(subpath, exist_ok=True)
     filename = subpath + "/nf.csv"
@@ -59,6 +85,14 @@ def output_performance_node_features_results(time, feature_set, settings):
 
 
 def output_results_csv_graphwave(prec, settings, no_matches, graphwave_settings, weights):
+    """
+    appends precision data of GW in csv
+    :param prec (list of float): precision values for different number of top matches
+    :param settings (Settings)
+    :param no_matches (int): count of total selected matches
+    :param graphwave_settings (Graphwave_settings): hyperparameters of GW
+    :param weights (list of float): weights for similarities of node features and node embeddings
+    """
     common_attr, common_attr_names, df, full_path = output_results_csv_common(no_matches, prec, settings, "graphwave_results.csv")
     # cols: File, Dataset, Record_Count, Threshold, Removed_Records, Node_Features (Normal/Histo/Fast), Top 10,50,100,500,1000, LSH_Parameter (Count, Size, Cos_Thold, Hyperplane_Count)
     sample_pcts_linspace = "(0,{0},{1})".format(str(graphwave_settings.sample_p_max_val), str(graphwave_settings.no_samples))
@@ -70,6 +104,14 @@ def output_results_csv_graphwave(prec, settings, no_matches, graphwave_settings,
     df.to_csv(full_path, index=False)
 
 def output_results_csv_graphsage(prec, settings, no_matches, graphsage_settings, weights):
+    """
+    appends precision data of GS in csv
+    :param prec (list of float): precision values for different number of top matches
+    :param settings (Settings)
+    :param no_matches (int): count of total selected matches
+    :param graphsage_settings (Graphsage_settings): hyperparameters of GS
+    :param weights (list of float): weights for similarities of node features and node embeddings
+    """
     common_attr, common_attr_names, df, full_path = output_results_csv_common(no_matches, prec, settings, "graphsage_results.csv")
     # cols: File, Dataset, Record_Count, Threshold, Removed_Records, Node_Features (Normal/Histo/Fast), Top 10,50,100,500,1000, LSH_Parameter (Count, Size, Cos_Thold, Hyperplane_Count)
     graphsage_attr = (weights[-1], graphsage_settings.layers, graphsage_settings.num_samples,
@@ -83,6 +125,14 @@ def output_results_csv_graphsage(prec, settings, no_matches, graphsage_settings,
     df.to_csv(full_path, index=False)
 
 def output_results_csv_deepgraphinfomax(prec, settings, no_matches, deepgraphinfomax_settings, weights):
+    """
+    appends precision data of DGI in csv
+    :param prec (list of float): precision values for different number of top matches
+    :param settings (Settings)
+    :param no_matches (int): count of total selected matches
+    :param deepgraphinfomax_settings (Deepgraphinfomax_settings): hyperparameters of DGI
+    :param weights (list of float): weights for similarities of node features and node embeddings
+    """
     common_attr, common_attr_names, df, full_path = output_results_csv_common(no_matches, prec, settings, "deepgraphinfomax_results.csv")
     # cols: File, Dataset, Record_Count, Threshold, Removed_Records, Node_Features (Normal/Histo/Fast), Top 10,50,100,500,1000, LSH_Parameter (Count, Size, Cos_Thold, Hyperplane_Count)
     deepgraphinfomax_attr = (weights[-1], deepgraphinfomax_settings.layers, deepgraphinfomax_settings.activations, deepgraphinfomax_settings.epochs)
@@ -94,6 +144,15 @@ def output_results_csv_deepgraphinfomax(prec, settings, no_matches, deepgraphinf
 
 
 def output_results_csv_common(no_matches, prec, settings, filename):
+    """
+    returns attributes and its values needed for all node embedding techniques +
+    prepares path + csv file
+    :param no_matches (int): count of total selected matches
+    :param prec (list of float): precision values for different number of top matches
+    :param settings (Settings)
+    :param filename (str): filename for csv file
+    :return: common_attr (list of attributes), common_attr_names (list of str), df (pd.Dataframe), full_path (str)
+    """
     os.makedirs(settings.results_path, exist_ok=True)
     output_path = settings.results_path + "/" if settings.results_path[-1] != "/" else settings.results_path
     full_path = output_path + filename
@@ -118,14 +177,27 @@ def output_results_csv_common(no_matches, prec, settings, filename):
 
 
 def get_path_for_graphwave_graph(settings):
+    """
+    :param settings:
+    :return: str: path to save networkx similarity graph for GraphWave use
+    """
     subpath, file = settings.pickle_file.split('/', 1)
     subpath = subpath + "_graphwave"
     return subpath + "/" + file
 
 def graphwave_graph_exists(settings):
+    """
+    :param settings (Settings)
+    :return: bool: does nx.Graph for GraphWave use already exist?
+    """
     return os.path.exists(get_path_for_graphwave_graph(settings))
 
 def save_graph_for_graphwave_org(graph, settings):
+    """
+    saves networkx similarity graph for GraphWave use
+    :param graph (nx.Graph): similarity graph
+    :param settings (Settings)
+    """
     filename = get_path_for_graphwave_graph(settings)
     subpath, _ = filename.split('/', 1)
     os.makedirs(subpath, exist_ok=True)
@@ -133,12 +205,22 @@ def save_graph_for_graphwave_org(graph, settings):
         pickle.dump(graph, output, pickle.HIGHEST_PROTOCOL)
 
 def load_graph_for_graphwave_org(settings):
+    """
+    loads networkx similarity graph for GraphWave use
+    :param settings (Settings)
+    :return: nx.Graph: similarity graph
+    """
     filename = get_path_for_graphwave_graph(settings)
     with open(filename, 'rb') as input:
         graph = pickle.load(input)
     return graph
 
 def delete_graphwave_graph(settings):
+    """
+    deletes nx.Graph pickle file needed for original GraphWave implementation
+    to make sure there is no difference to the StellarGraph object
+    :param settings
+    """
     if graphwave_graph_exists(settings):
         filename = get_path_for_graphwave_graph(settings)
         os.remove(filename)

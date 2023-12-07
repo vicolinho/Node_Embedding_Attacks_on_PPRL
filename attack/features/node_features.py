@@ -15,22 +15,52 @@ from attack.sim_graph.adjust_sims import compute_number_of_qgrams
 
 
 def gph_indep_node_features_plain(series_qgrams, series_node_count, id):
-    # series of DataFrame containing q-grams
+    """
+    returns graph independent node features for plain data
+    :param series_qgrams (pd.Series): column of DataFrame containing q-grams
+    :param series_node_count (pd.Series): column of DataFrame containing id count:
+    :param id (str): prefix to distungish plain nodes from encoded nodes
+    :return: pd.DataFrame: id: prefix + qgram_strings with qgram count and node count
+    """
     qgram_counts = series_qgrams.apply(len)
     qgrams_strings = series_qgrams.apply(sim_graph.adjust_node_id, args=(id))
     return pd.DataFrame({QGRAMS_COUNT: qgram_counts.to_numpy(), NODE_COUNT: series_node_count.to_numpy()}, index=qgrams_strings)
 
 def gph_indep_node_features_encoded(series_bitarrays, series_encoded_attr, series_node_count, bf_length, num_hash_f, id):
-    # series of DataFrame containing q-grams
+    """
+    returns graph independent node features for encoded data
+    :param series_bitarrays (pd.Series): column of DataFrame containing bloom filters as bitarrays
+    :param series_encoded_attr (pd.Series): column of DataFrame containing bloom filters as hashable (base64) encoded data
+    :param series_node_count (pd.Series): column of DataFrame containing id count
+    :param bf_length (int): length of bloom filter
+    :param num_hash_f (int): number of hash functions for calculation of bloom filter
+    :param id (str): prefix to distungish plain nodes from encoded nodes
+    :return: pd.Dataframe: records with graph independent node features
+    """
     bitarray_counts = series_bitarrays.apply(adjusted_number_of_qgrams, args=(bf_length, num_hash_f))
     id_strings = series_encoded_attr.apply(sim_graph.adjust_node_id, args=(id))
     return pd.DataFrame({QGRAMS_COUNT: bitarray_counts.to_numpy(), NODE_COUNT: series_node_count.to_numpy()}, index=id_strings)
 
 def adjusted_number_of_qgrams(bitarray, bf_length, num_hash_f):
+    """
+    adjust node_length for encoded data
+    :param bitarray (bitarray)
+    :param bf_length (int): length of bloom filter
+    :param num_hash_f (int): number of hash functions used for encoding
+    :return: float: node length adjusted
+    """
     number_of_bits = bitarray.count(1)
     return compute_number_of_qgrams(bf_length, num_hash_f, number_of_bits)
 
 def add_node_features_vidange_networkx(G, nodes, max_degree, settings):
+    """
+    calculates node data for similarity graph depending on settings(.node_features) and records time needed
+    :param G (nx.Graph): similarity graph with nodes and edges
+    :param nodes (pd.Dataframe): nodes with graph independent node data
+    :param max_degree (int): maximum node degree possible (|N| - 1), needed for histogram
+    :param settings (Settings)
+    :return: pd.Dataframe: nodes with node features as columns
+    """
     # List of features from Vidange et al. A Graph Matching Attack on PPRL
     # Histogram on log-scale (Heimann et al. REGAL: Representation Learning-Based Graph Alignment)
     time_start = process_time()
@@ -93,6 +123,12 @@ def add_node_features_vidange_networkx(G, nodes, max_degree, settings):
 
 
 def scale_node_features(arr, settings):
+    """
+    scales node features (either standardization or 0-1 normalization
+    :param arr (np.array (node feature count x node_count))
+    :param settings (Settings)
+    :return: np.array
+    """
     if settings.graph_scaled == "standardscaler":
         scaler = preprocessing.StandardScaler()
         arr = scaler.fit_transform(arr)
@@ -103,12 +139,26 @@ def scale_node_features(arr, settings):
 
 
 def get_one_hop_histo(G, egonet, max_degree):
+    """
+    calculates one hop degree histogram on a log2 scale
+    :param G (nx.Graph) similarity graph
+    :param egonet (nx.Graph)
+    :param max_degree (int): maximum node degree (|N| - 1)
+    :return: list of int: one hop histogram
+    """
     one_hop_degrees = Counter([d for n, d in G.degree(egonet.nodes())])
     one_hop_histo = counter_to_log_scale_histogram(one_hop_degrees, max_degree)
     return one_hop_histo
 
 
 def get_two_hop_histo(G, max_degree, node_id):
+    """
+    calculates two hop degree histogram on a log2 scale
+    :param G (nx.Graph): similarity graph
+    :param max_degree (int): maximum node degree (|N| - 1)
+    :param node_id (str): node of which histogram is to be calculated
+    :return: list of int: two hop histogram
+    """
     two_hop_egonet = ego_graph(G, node_id, radius=2, center=True, undirected=False, distance=None)
     two_hop_degrees = Counter([d for n, d in G.degree(two_hop_egonet.nodes())])
     two_hop_histo = counter_to_log_scale_histogram(two_hop_degrees, max_degree)
@@ -116,6 +166,11 @@ def get_two_hop_histo(G, max_degree, node_id):
 
 
 def get_egonet_features(egonet):
+    """
+    returns features of egonet (of a node)
+    :param egonet (nx.Graph)
+    :return: int, float: node count and density of egonet
+    """
     egonet_node_count = len(egonet.nodes())
     egonet_degr = len(egonet.edges())
     egonet_dens = egonet_degr / (egonet_node_count / 2 * (egonet_node_count - 1))
@@ -123,6 +178,12 @@ def get_egonet_features(egonet):
 
 
 def counter_to_log_scale_histogram(counter, max_degree):
+    """
+    transforms degree frequency into log-scaled histogram
+    :param counter (Counter): "dict" of counts for degrees
+    :param max_degree (int): maximum possible node degree (|N| - 1)
+    :return: list of int: histogram
+    """
     histo = int(math.log(max_degree, 2)) * [0]
     for key, value in counter.items():
         histo[int(math.log(key, 2))] += value

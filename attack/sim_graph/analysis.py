@@ -22,8 +22,17 @@ def get_count_hash_func(df_plain, df_encoded):
 
 
 def no_hash_func_avg(bit_count, qgram_count, bf_length):
+    """
+    estimates number of hash function used for bloom filter encoding
+
+    :param bit_count (float): average hamming weight  (b)
+    :param qgram_count (float): average number of qgrams (q)
+    :param bf_length (int): length of bloom filter (l)
+    :return:
+
     # b = l * (1-(1- 1/l)^h*q) -> Maximum possible bit count * Probability a certain bit is set
     # logZ(-b/l + 1) = h*q  |:q
     # h = logZ(-b/l + 1) / q
+    """
     z = 1 - 1 / bf_length
     return math.log(-bit_count/bf_length+1,z)/qgram_count

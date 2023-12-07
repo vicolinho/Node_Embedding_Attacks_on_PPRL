@@ -1,6 +1,10 @@
 import argparse
 
 def argparser():
+    """
+    creates argument parser and returns arguments
+    :return: argparser.Namespace: stores arguments from parser
+    """
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='mode')
     parser_calc = subparsers.add_parser('graph_save', help="create and save similarity graph with node features")
@@ -20,7 +24,7 @@ def argparser():
                                  help='which Vidanage-based node features will be used (all, fast, egonet1, egonet2)',
                                  default="all", choices=['all', 'fast', 'egonet1', 'egonet2'])
         subparser.add_argument("--node_count", help='includes node count as node feature', action='store_true', default=False)
-        subparser.add_argument("--graph_scaled",
+        subparser.add_argument("--nf_scaled",
                                help='needs to be set if both graphs should be scaled independently (standardscaler, minmaxscaler)',
                                default="", choices=['standardscaler', 'minmaxscaler'])
         subparser.add_argument("--min_comp_size", help='minimum connected component size for node to be matched',
@@ -62,6 +66,9 @@ def argparser():
     return args
 
 def fraction(x):
+    """
+    type for parser: float between 0.0 and 1.0
+    """
     try:
         x = float(x)
     except ValueError:

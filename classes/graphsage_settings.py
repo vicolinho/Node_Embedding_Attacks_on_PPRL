@@ -1,10 +1,20 @@
 import attack.constants
-from attack.node_embeddings import embeddings
 
 
 class Graphsage_settings():
+    """
+    encapsulates some hyperparameters for GraphSAGE
+    """
 
-    def __init__(self, layers=None, num_samples=None, number_of_walks = 1, length = 5, batch_size = 50, epochs = 10):
+    def __init__(self, layers=None, num_samples=None, number_of_walks = 1, length = 5, batch_size = 512, epochs = 10):
+        """
+        :param layers (list of int)
+        :param num_samples (list of int)
+        :param number_of_walks (int)
+        :param length (int)
+        :param batch_size (int)
+        :param epochs (int)
+        """
         if num_samples is None:
             num_samples = [10, 5]
         if layers is None:
@@ -18,6 +28,9 @@ class Graphsage_settings():
         self.technique = attack.constants.GRAPHSAGE
 
     def __str__(self):
+        """
+        needed for console output
+        """
         return "{0} (lay: {1}, |Samples|: {2}, |W|: {3}, W_len: {4}, |B|: {5}, Eps: {6})"\
             .format("graphsage", str(self.layers), str(self.num_samples), str(self.number_of_walks),
                     str(self.length), str(self.batch_size), str(self.epochs))

@@ -16,6 +16,7 @@ def count_true_matches(predicted_matches, actual_matches):
 
 def get_precisions(predicted_matches, actual_matches, num_top_pairs):
     """
+    calculates precision values for different number of top predicted matches
     :param predicted_matches: list of tuples with representations of a predicted matching pair
     :param actual_matches: list of tuples with representations of a actual matching pair
     :param num_top_pairs: list of counts of how many top matches should be looked at

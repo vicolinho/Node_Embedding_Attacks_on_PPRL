@@ -1,4 +1,4 @@
-# file with constants most notably for new columns to be created
+# file with constants for new columns to be created or names of node embedding techniques
 
 QGRAMS = 'qgrams'
 NODE_COUNT = 'node_count'

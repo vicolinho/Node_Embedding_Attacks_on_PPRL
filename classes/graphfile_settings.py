@@ -1,6 +1,14 @@
 class graphfile_settings:
     def __init__(self, graph_filename):
-        # pattern: c{0}_t{1}_r{2}e{3}{4}{5} OR c{0}_t{1}_r{2}e{3}_lshc{4}_lshs{5}{6}{7}
+        """
+        constructor from filename of graph pickle file
+        :param graph_filename (str)
+
+        pattern: c{rc}_t{t}(_comp{c})_r{rp}e{re}(_lshc{c})(_lshs{s})_{nf}{sca}.pkl
+        inside {} are variables, all inside () is optional
+        rc - record count, t - threshold, c - minimal connected component size, rp/re - fraction removed records plain/encoded,
+        nf - node feature mode, sca - scaler of node features, c - lsh count blocking, s - lsh size blocking
+        """
         file_without_extension = graph_filename[:graph_filename.rfind('.')]
         name_parts = file_without_extension.split("_")
         self.record_count = int(name_parts[0][1:])
@@ -27,6 +35,9 @@ class graphfile_settings:
 
 
     def set_removed_records(self, removed_records_namepart):
+        """
+        extracts removing fraction from filename, needed to support legacy filename
+        """
         e_pos = removed_records_namepart.find("e")
         if e_pos == -1:
             self.removed_records_plain = float(removed_records_namepart[1:])

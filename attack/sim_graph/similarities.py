@@ -6,39 +6,57 @@ from stellargraph.globalvar import SOURCE, TARGET, WEIGHT
 
 from attack.constants import QGRAMS, BITARRAY, LSH_BLOCKING
 from attack.sim_graph import sim_graph
-from attack.sim_graph.adjust_sims import compute_real_dice_from_bits
+from attack.sim_graph.adjust_sims import compute_adjusted_dice_from_bits
 
 
-def edges_df_from_blk_plain(blk_dict, qgram_attributes, threshold, id):
-    return edges_df_from_blk(blk_dict, edges_df_from_blk_element_plain, qgram_attributes, threshold, id)
-
-def edges_df_from_blk_bf(blk_dict, encoded_attr, threshold, id):
-    return edges_df_from_blk(blk_dict, edges_df_from_blk_element_bf, encoded_attr, threshold, id)
-
-def edges_df_from_blk_bf_adjusted(blk_dict, threshold, encoded_attr, bf_length, num_of_hash_func, id):
-    return edges_df_from_blk(blk_dict, edges_df_from_blk_element_bf_adjusted, encoded_attr, threshold, id, bf_length=bf_length, num_of_hash_func=num_of_hash_func)
-
-
-def edges_df_from_blk(blk_dict, sim_func, sim_attr, threshold, id, **kwargs):
+def edges_df_from_blk_plain(blk_dict, threshold, id):
+    """
+    calculates edge data for plain similarity graph
+    :param blk_dict (dict: (key: bytes, value: pd.DataFrame)): dict to seperate data where dice similarity is to be compared (blocking)
+    :param threshold (float): threshold for similarity graph
+    :param id (str): prefix to distinguish plain from encoded nodes
+    :return: pd.DataFrame: edge data for similarity graph
+    """
     df = DataFrame()
     for key, value in blk_dict.items():
-        df_temp = sim_func(value, sim_attr, threshold, id, **kwargs)
+        df_temp = edges_df_from_blk_element(value, threshold, id=id, node_attribute=QGRAMS, sim_attribute=QGRAMS,
+                                  sim_func=dice_sim_plain)
+        df = pd.concat([df, df_temp])
+    return df
+
+def edges_df_from_blk_bf_adjusted(blk_dict, threshold, encoded_attr, bf_length, num_of_hash_func, id):
+    """
+    calculates edge data for encoded similarity graph
+    :param blk_dict (dict: (key: bytes, value: pd.DataFrame)): dict to seperate data where dice similarity is to be compared (blocking)
+    :param threshold (float): threshold for similarity graph
+    :param encoded_attr (str): attribute name of encoded bloom filter
+    :param bf_length (int): length of bloom filter
+    :param num_of_hash_func (int): number of hash functions used for bloom filter
+    :param id (str): prefix to distinguish plain from encoded nodes
+    :return: pd.DataFrame: edge data for similarity graph
+    """
+    df = DataFrame()
+    for key, value in blk_dict.items():
+        df_temp = edges_df_from_blk_element(value, threshold, id=id, node_attribute=encoded_attr, sim_attribute=BITARRAY,
+                                            sim_func=compute_adjusted_dice_from_bits, num_hash_f=num_of_hash_func,
+                                            bf_length=bf_length)
+
         df = pd.concat([df, df_temp])
     return df
 
 
-def edges_df_from_blk_element_plain(df, qgram_attributes, threshold, id):
-    # df = add_qgrams_as_key(df, qgram_attributes)
-    return edges_df_from_blk_element(df, threshold, id=id, node_attribute=QGRAMS, sim_attribute=QGRAMS, sim_func=dice_sim_plain)
-
-
-def edges_df_from_blk_element_bf(df, encoded_attr, threshold, id):
-    return edges_df_from_blk_element(df, threshold, id=id, node_attribute=encoded_attr, sim_attribute=BITARRAY, sim_func=dice_sim_bfs)
-
-def edges_df_from_blk_element_bf_adjusted(df, encoded_attr, threshold, id, bf_length, num_of_hash_func):
-    return edges_df_from_blk_element(df, threshold, id=id, node_attribute=encoded_attr, sim_attribute=BITARRAY, sim_func=compute_real_dice_from_bits, num_hash_f=num_of_hash_func, bf_length=bf_length)
-
 def edges_df_from_blk_element(df, threshold, node_attribute, sim_attribute, sim_func, id, **kwargs):
+    """
+    calculates edges of similarity graph based of block
+    :param df (pd.DataFrame): qgram data
+    :param threshold (float): threshold for similarity graph
+    :param node_attribute (str): name of attribute used for node representation
+    :param sim_attribute (str): name of attribute used for similarity calculation
+    :param sim_func (function): similarity function to be used
+    :param id (str): prefix to distinguish plain from encoded nodes
+    :param kwargs (dict): possibly needed for calculation for encoded data (bloom filter length, hash function count)
+    :return: pd.DataFrame with edge data
+    """
     arr_first, arr_second, arr_sims = [], [], []
     number = (df.columns[0]).find(LSH_BLOCKING) + len(LSH_BLOCKING)
     i = int(df.columns[0][number:])
@@ -58,33 +76,26 @@ def edges_df_from_blk_element(df, threshold, node_attribute, sim_attribute, sim_
     d = {SOURCE: arr_first, TARGET: arr_second , WEIGHT: arr_sims}
     return pd.DataFrame(d)
 
+
 def pair_computed(pair):
+    """
+    checks if combination pair is already computed
+    :param pair (tuple of frozenset or bitarray)
+    :return: bool: is pair already compared
+    """
     for i in range(2, len(pair[0])):
         if pair[0][i] == pair[1][i]:
             return True
     return False
 
-def get_comp_rec_pairs(df, node_attribute, sim_attribute): # must integrate both functions which are redundant
-    if node_attribute == sim_attribute:
-        df = df.loc[:, [node_attribute]]
-    else:
-        df = df.loc[:, [node_attribute, sim_attribute]]
-    records = df.to_records(index=False)
-    pairs = list(combinations(records, 2))
-    return pairs
-
-
-def dice_sim_bfs(bitarray1, bitarray2):
-    bits_and = bitarray1 & bitarray2
-    bit_count_sum = bitarray1.count(1) + bitarray2.count(1)
-    if bit_count_sum == 0:
-        return 0
-    return 2 * bits_and.count(1) / bit_count_sum
-
-
-
 
 def dice_sim_plain(bigrams1, bigrams2):
+    """
+    calculates dice similarity of bigram sets
+    :param bigrams1 (set of tuples (which consist of characters)): bigrams to be compared
+    :param bigrams2 (set of tuples (which consist of characters))
+    :return: float: dice similarity
+    """
     intersection = bigrams1.intersection(bigrams2)
     if len(bigrams1) + len(bigrams2) != 0:
         return 2 * len(intersection) / (len(bigrams1) + len(bigrams2))

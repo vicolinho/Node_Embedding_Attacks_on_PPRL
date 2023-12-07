@@ -33,9 +33,15 @@ def main():
     calc_emb_analysis(combined_graph, settings, actual_matches)
 
 
-def calc_emb_analysis(combined_graph, settings, true_matches):
+def calc_emb_analysis(combined_graph, settings, actual_matches):
+    """
+    calculates node embeddings, selects node matches, calculates precision values and saves them in csv
+    :param combined_graph (StellarGraph): composed similarity graph of both plain and encoded data
+    :param settings (Settings): programm settings
+    :param actual_matches (list of records): node matching pairs with their ids
+    """
     embeddings_features = embeddings.just_features_embeddings(combined_graph, settings)
-    matches_precision_output(embeddings_features, settings, true_matches, technique=attack.constants.FEATURES)
+    matches_precision_output(embeddings_features, settings, actual_matches, technique=attack.constants.FEATURES)
     embedding_results_gen_graphsage = hyperparameter_tuning.embeddings_hyperparameter_graphsage_gen(combined_graph,
                                                                                                     hyperparameter_tuning.get_params_graphsage(settings.hp_config), settings.scaler)
     embedding_results_gen_deepgraphinfomax = hyperparameter_tuning.embeddings_hyperparameter_deepgraphinfomax_gen(
@@ -46,15 +52,20 @@ def calc_emb_analysis(combined_graph, settings, true_matches):
 
     for embedding_results in chain(embedding_results_gen_graphwave, embedding_results_gen_deepgraphinfomax, embedding_results_gen_graphsage):
         embedding_results = embedding_results.filter(embeddings_features.nodes)
-        matches_precision_output(embedding_results, settings, true_matches, embedding_results.algo_settings.technique)
+        matches_precision_output(embedding_results, settings, actual_matches, embedding_results.algo_settings.technique)
         weights = settings.weights
         for weight_selection in weights:
             merged_embeddings_results = embeddings_features.merge(embedding_results, weight1=weight_selection[0], weight2=weight_selection[1])
-            matches_precision_output(merged_embeddings_results, settings, true_matches,
+            matches_precision_output(merged_embeddings_results, settings, actual_matches,
                                      embedding_results.algo_settings.technique, weights=weight_selection)
 
 
 def generate_graph(settings):
+    """
+    generates both similarity graphs with node features and composes them, also returns actual matches needed for all-in-one mode
+    :param settings (Settings): settings unrelated to node embedding techniques
+    :return: StellarGraph (combined similarity graph with node features), list of records (actual matches with node ids)
+    """
     plain_data, encoded_data, actual_matches, no_hash_func, bf_length = get_record_data_df(settings)
     nodes_plain, edges_plain = calculate_sim_graph_data_plain(plain_data, settings, bf_length, id='u')  # normal
     nodes_encoded, edges_encoded = calculate_sim_graph_data_encoded(encoded_data, settings, bf_length, no_hash_func, id='v')
@@ -68,6 +79,11 @@ def generate_graph(settings):
     return combined_graph, actual_matches
 
 def get_record_data_df(settings):
+    """
+    imports and preprocesses plain and encoded input data from csv file including actual matches, number of hash function and length of bloom filter
+    :param settings (Settings): program settings
+    :return: pd.DataFrame (with plain data), pd.DataFrame (with encoded data), list of records (actual matches), int (number of hash functions needed for bloom filter), int (length of bloom filter)
+    """
     plain_data = import_data.import_data(settings.plain_file, settings.record_count, settings.removed_plain_record_frac, random_state=3)
     encoded_data = import_data.import_data(settings.encoded_file, settings.record_count, settings.removed_encoded_record_frac, random_state=5)
     plain_data, encoded_data, no_hash_func, bf_length = preprocess_dfs(encoded_data, plain_data, settings)
@@ -77,6 +93,14 @@ def get_record_data_df(settings):
 
 
 def matches_precision_output(embeddings_results, settings, actual_matches, technique, weights=[1.0]):
+    """
+    selects matches, calculates precision values and saves them in csv file from node embeddings
+    :param embeddings_results (Embeddings_results): Embeddings_results: encapsulates node embeddings with nodes and technique settings
+    :param settings (Settings): program settings
+    :param actual_matches (list of tuples): matches with node ids
+    :param technique (str): name of node embedding technique
+    :param weights (list of float): weights needed to combine node embeddings (last) with node features (first)
+    """
     predicted_matches = node_matching.matches_from_embeddings_combined_graph(embeddings_results, 'u', 'v', settings, weights)
     precision_list = get_precisions(predicted_matches, actual_matches, settings.num_top_pairs)
     print(embeddings_results.info_string(), settings.num_top_pairs, precision_list)
@@ -97,4 +121,3 @@ if __name__ == '__main__':
     end = time.time()
     print(end - start)
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/

@@ -2,6 +2,10 @@ import numpy as np
 
 
 def log_blk_dist(blk_dicts):
+    """
+    prints distribution of blocking keys
+    :param blk_dicts (list of dicts): key of dict is blocking key, value is pd.Dataframe with corresponding records
+    """
     blk_sizes = np.array([])
     for blk_dict in blk_dicts:
         for k in blk_dict:
